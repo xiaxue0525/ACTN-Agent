@@ -218,7 +218,9 @@ describe("moveToTrash", () => {
       allowedRoots: [path.dirname(sourcePath)],
     });
     expect(mocks.runCommandWithTimeout).not.toHaveBeenCalled();
-    expect(runtime.log).toHaveBeenCalledWith(`Moved to Trash: ${targetPath}`);
+    expect(runtime.log).toHaveBeenCalledWith(
+      `Moved to Trash: ${targetPath} / 已移至废纸篓：${targetPath}`,
+    );
   });
 
   it("allows fs-safe trash to move a symlink whose target resolves outside the parent", async () => {
@@ -575,10 +577,10 @@ describe("validateGatewayPasswordInput", () => {
 
   it("rejects literal string coercion artifacts", () => {
     expect(validateGatewayPasswordInput("undefined")).toBe(
-      'Cannot be the literal string "undefined" or "null"',
+      'Cannot be the literal string "undefined" or "null" / 不能是字面量 "undefined" 或 "null"',
     );
     expect(validateGatewayPasswordInput("null")).toBe(
-      'Cannot be the literal string "undefined" or "null"',
+      'Cannot be the literal string "undefined" or "null" / 不能是字面量 "undefined" 或 "null"',
     );
   });
 
