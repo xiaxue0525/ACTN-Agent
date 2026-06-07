@@ -63,7 +63,9 @@ describe("formatCliBannerLine", () => {
       richTty: false,
     });
 
-    expect(line).toBe("🐲 ACTAgent 2026.3.7 (abc1234) — All your chats, one ACTAgent.");
+    expect(line).toBe(
+      "🐲 ACTAgent 2026.3.7 (abc1234) — All your chats, one ACTAgent. / 您的所有聊天，一个 ACTAgent 搞定。",
+    );
   });
 
   it("prefers explicit tagline mode over config", () => {
@@ -78,7 +80,9 @@ describe("formatCliBannerLine", () => {
       mode: "default",
     });
 
-    expect(line).toBe("🐲 ACTAgent 2026.3.7 (abc1234) — All your chats, one ACTAgent.");
+    expect(line).toBe(
+      "🐲 ACTAgent 2026.3.7 (abc1234) — All your chats, one ACTAgent. / 您的所有聊天，一个 ACTAgent 搞定。",
+    );
   });
 
   it("drops decorative emoji for generic Linux terminals", () => {
