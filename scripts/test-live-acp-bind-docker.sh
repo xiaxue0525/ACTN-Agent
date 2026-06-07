@@ -1,0 +1,449 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="${ACTAGENT_LIVE_DOCKER_REPO_ROOT:-$SCRIPT_ROOT_DIR}"
+ROOT_DIR="$(cd "$ROOT_DIR" && pwd)"
+TRUSTED_HARNESS_DIR="${ACTAGENT_LIVE_DOCKER_TRUSTED_HARNESS_DIR:-$SCRIPT_ROOT_DIR}"
+if [[ -z "$TRUSTED_HARNESS_DIR" || ! -d "$TRUSTED_HARNESS_DIR" ]]; then
+  echo "ERROR: trusted live Docker harness directory not found: ${TRUSTED_HARNESS_DIR:-<empty>}." >&2
+  exit 1
+fi
+TRUSTED_HARNESS_DIR="$(cd "$TRUSTED_HARNESS_DIR" && pwd)"
+source "$TRUSTED_HARNESS_DIR/scripts/lib/live-docker-auth.sh"
+IMAGE_NAME="${ACTAGENT_IMAGE:-actagent:local}"
+LIVE_IMAGE_NAME="${ACTAGENT_LIVE_IMAGE:-${IMAGE_NAME}-live}"
+CONFIG_DIR="${ACTAGENT_CONFIG_DIR:-$HOME/.actagent}"
+WORKSPACE_DIR="${ACTAGENT_WORKSPACE_DIR:-$HOME/.actagent/workspace}"
+PROFILE_FILE="$(actagent_live_default_profile_file)"
+ACP_AGENT_LIST_RAW="${ACTAGENT_LIVE_ACP_BIND_AGENTS:-${ACTAGENT_LIVE_ACP_BIND_AGENT:-claude,codex,gemini}}"
+TEMP_DIRS=()
+DOCKER_USER="${ACTAGENT_DOCKER_USER:-node}"
+DOCKER_HOME_MOUNT=()
+DOCKER_AUTH_PRESTAGED=0
+DOCKER_TRUSTED_HARNESS_CONTAINER_DIR="/trusted-harness"
+DOCKER_TRUSTED_HARNESS_MOUNT=(-v "$TRUSTED_HARNESS_DIR":"$DOCKER_TRUSTED_HARNESS_CONTAINER_DIR":ro)
+
+actagent_live_acp_bind_append_build_extension() {
+  local extension="${1:?extension required}"
+  local current="${ACTAGENT_DOCKER_BUILD_EXTENSIONS:-${ACTAGENT_EXTENSIONS:-}}"
+  case " $current " in
+    *" $extension "*)
+      ;;
+    *)
+      export ACTAGENT_DOCKER_BUILD_EXTENSIONS="${current:+$current }$extension"
+      ;;
+  esac
+}
+
+actagent_live_acp_bind_resolve_auth_provider() {
+  case "${1:-}" in
+    claude) printf '%s\n' "claude-cli" ;;
+    codex) printf '%s\n' "codex-cli" ;;
+    droid) printf '%s\n' "droid" ;;
+    gemini) printf '%s\n' "google-gemini-cli" ;;
+    opencode) printf '%s\n' "opencode" ;;
+    *)
+      echo "Unsupported ACTAGENT_LIVE_ACP_BIND agent: ${1:-} (expected claude, codex, droid, gemini, or opencode)" >&2
+      return 1
+      ;;
+  esac
+}
+
+actagent_live_acp_bind_resolve_agent_command() {
+  case "${1:-}" in
+    claude) printf '%s' "${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND_CLAUDE:-${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND:-}}" ;;
+    codex) printf '%s' "${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND_CODEX:-${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND:-}}" ;;
+    droid) printf '%s' "${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND_DROID:-${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND:-}}" ;;
+    gemini) printf '%s' "${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND_GEMINI:-${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND:-}}" ;;
+    opencode) printf '%s' "${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND_OPENCODE:-${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND:-}}" ;;
+    *) return 1 ;;
+  esac
+}
+
+cleanup_temp_dirs() {
+  if ((${#TEMP_DIRS[@]} > 0)); then
+    rm -rf "${TEMP_DIRS[@]}"
+  fi
+}
+trap cleanup_temp_dirs EXIT
+
+if [[ -n "${ACTAGENT_DOCKER_CLI_TOOLS_DIR:-}" ]]; then
+  CLI_TOOLS_DIR="${ACTAGENT_DOCKER_CLI_TOOLS_DIR}"
+elif actagent_live_is_ci; then
+  CLI_TOOLS_DIR="$(mktemp -d "${RUNNER_TEMP:-/tmp}/actagent-docker-cli-tools.XXXXXX")"
+  TEMP_DIRS+=("$CLI_TOOLS_DIR")
+else
+  CLI_TOOLS_DIR="$HOME/.cache/actagent/docker-cli-tools"
+fi
+if [[ -n "${ACTAGENT_DOCKER_CACHE_HOME_DIR:-}" ]]; then
+  CACHE_HOME_DIR="${ACTAGENT_DOCKER_CACHE_HOME_DIR}"
+elif actagent_live_is_ci; then
+  CACHE_HOME_DIR="$(mktemp -d "${RUNNER_TEMP:-/tmp}/actagent-docker-cache.XXXXXX")"
+  TEMP_DIRS+=("$CACHE_HOME_DIR")
+else
+  CACHE_HOME_DIR="$HOME/.cache/actagent/docker-cache"
+fi
+
+actagent_live_prepare_bind_dir_for_container_user "$CLI_TOOLS_DIR"
+actagent_live_prepare_bind_dir_for_container_user "$CACHE_HOME_DIR"
+if actagent_live_uses_managed_bind_dirs; then
+  DOCKER_USER="$(id -u):$(id -g)"
+fi
+
+PROFILE_MOUNT=()
+PROFILE_STATUS="none"
+if [[ -f "$PROFILE_FILE" && -r "$PROFILE_FILE" ]]; then
+  PROFILE_STATUS="$PROFILE_FILE"
+fi
+
+actagent_live_acp_bind_load_factory_api_key_from_profile() {
+  [[ -z "${FACTORY_API_KEY:-}" ]] || return 0
+  [[ -f "$PROFILE_FILE" && -r "$PROFILE_FILE" ]] || return 0
+  [[ "$PROFILE_FILE" != "$HOME/.profile" ]] || return 0
+
+  local line value
+  line="$(sed -nE 's/^(export[[:space:]]+)?FACTORY_API_KEY=//p' "$PROFILE_FILE" | tail -n 1 || true)"
+  [[ -n "$line" ]] || return 0
+  value="$line"
+  if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+    value="${value#\"}"
+    value="${value%\"}"
+  elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+    value="${value#\'}"
+    value="${value%\'}"
+  fi
+  [[ -n "$value" ]] || return 0
+  export FACTORY_API_KEY="$value"
+}
+
+read -r -d '' LIVE_TEST_CMD <<'EOF' || true
+set -euo pipefail
+[ -f "$HOME/.profile" ] && [ -r "$HOME/.profile" ] && source "$HOME/.profile" || true
+export NPM_CONFIG_PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"
+export npm_config_prefix="$NPM_CONFIG_PREFIX"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export COREPACK_HOME="${COREPACK_HOME:-$XDG_CACHE_HOME/node/corepack}"
+export NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE:-$XDG_CACHE_HOME/npm}"
+export npm_config_cache="$NPM_CONFIG_CACHE"
+mkdir -p "$NPM_CONFIG_PREFIX" "$HOME/.local/bin" "$XDG_CACHE_HOME" "$COREPACK_HOME" "$NPM_CONFIG_CACHE"
+chmod 700 "$XDG_CACHE_HOME" "$COREPACK_HOME" "$NPM_CONFIG_CACHE" || true
+export PATH="$HOME/.local/bin:$NPM_CONFIG_PREFIX/bin:$PATH"
+run_setup_command() {
+  local timeout_value="${ACTAGENT_LIVE_ACP_BIND_SETUP_TIMEOUT_SECONDS:-180}s"
+  local timeout_bin=""
+  if command -v timeout >/dev/null 2>&1; then
+    timeout_bin="timeout"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    timeout_bin="gtimeout"
+  else
+    echo "timeout command not found; cannot bound live ACP bind setup after ${timeout_value}" >&2
+    return 127
+  fi
+  if "$timeout_bin" --kill-after=1s 1s true >/dev/null 2>&1; then
+    "$timeout_bin" --kill-after=30s "$timeout_value" "$@"
+  else
+    "$timeout_bin" "$timeout_value" "$@"
+  fi
+}
+if [ "${ACTAGENT_DOCKER_AUTH_PRESTAGED:-0}" != "1" ]; then
+  IFS=',' read -r -a auth_dirs <<<"${ACTAGENT_DOCKER_AUTH_DIRS_RESOLVED:-}"
+  IFS=',' read -r -a auth_files <<<"${ACTAGENT_DOCKER_AUTH_FILES_RESOLVED:-}"
+  if ((${#auth_dirs[@]} > 0)); then
+    for auth_dir in "${auth_dirs[@]}"; do
+      [ -n "$auth_dir" ] || continue
+      if [ -d "/host-auth/$auth_dir" ]; then
+        mkdir -p "$HOME/$auth_dir"
+        cp -R "/host-auth/$auth_dir/." "$HOME/$auth_dir"
+        chmod -R u+rwX "$HOME/$auth_dir" || true
+      fi
+    done
+  fi
+  if ((${#auth_files[@]} > 0)); then
+    for auth_file in "${auth_files[@]}"; do
+      [ -n "$auth_file" ] || continue
+      if [ -f "/host-auth-files/$auth_file" ]; then
+        mkdir -p "$(dirname "$HOME/$auth_file")"
+        cp "/host-auth-files/$auth_file" "$HOME/$auth_file"
+        chmod u+rw "$HOME/$auth_file" || true
+      fi
+    done
+  fi
+fi
+agent="${ACTAGENT_LIVE_ACP_BIND_AGENT:-claude}"
+case "$agent" in
+  claude)
+    if [ ! -x "$NPM_CONFIG_PREFIX/bin/claude" ]; then
+      run_setup_command npm install -g @anthropic-ai/claude-code
+    fi
+    real_claude="$NPM_CONFIG_PREFIX/bin/claude-real"
+    if [ ! -x "$real_claude" ] && [ -x "$NPM_CONFIG_PREFIX/bin/claude" ]; then
+      mv "$NPM_CONFIG_PREFIX/bin/claude" "$real_claude"
+    fi
+    if [ -x "$real_claude" ]; then
+      cat > "$NPM_CONFIG_PREFIX/bin/claude" <<WRAP
+#!/usr/bin/env bash
+script_dir="\$(CDPATH= cd -- "\$(dirname -- "\$0")" && pwd)"
+if [ -n "\${ACTAGENT_LIVE_ACP_BIND_ANTHROPIC_API_KEY:-}" ]; then
+  export ANTHROPIC_API_KEY="\${ACTAGENT_LIVE_ACP_BIND_ANTHROPIC_API_KEY}"
+fi
+if [ -n "\${ACTAGENT_LIVE_ACP_BIND_ANTHROPIC_API_KEY_OLD:-}" ]; then
+  export ANTHROPIC_API_KEY_OLD="\${ACTAGENT_LIVE_ACP_BIND_ANTHROPIC_API_KEY_OLD}"
+fi
+exec "\$script_dir/claude-real" "\$@"
+WRAP
+      chmod +x "$NPM_CONFIG_PREFIX/bin/claude"
+    fi
+    export CLAUDE_CODE_EXECUTABLE="$NPM_CONFIG_PREFIX/bin/claude"
+    claude auth status || true
+    ;;
+  codex)
+    if [ ! -x "$NPM_CONFIG_PREFIX/bin/codex" ]; then
+      run_setup_command npm install -g @openai/codex
+    fi
+    ;;
+  droid)
+    if ! command -v droid >/dev/null 2>&1; then
+      run_setup_command bash -lc 'curl -fsSL https://app.factory.ai/cli | sh'
+      export PATH="$HOME/.local/bin:$PATH"
+    fi
+    droid --version
+    if [ -z "${FACTORY_API_KEY:-}" ]; then
+      echo "ERROR: Droid Docker ACP bind requires FACTORY_API_KEY; Factory OAuth/keyring auth in ~/.factory is not portable into the container." >&2
+      exit 1
+    fi
+    ;;
+  gemini)
+    mkdir -p "$HOME/.gemini"
+    if [ ! -x "$NPM_CONFIG_PREFIX/bin/gemini" ]; then
+      run_setup_command npm install -g @google/gemini-cli
+    fi
+    if [ -n "${GEMINI_API_KEY:-}" ] || [ -n "${GOOGLE_API_KEY:-}" ]; then
+      gemini_auth_type="gemini-api-key"
+      if [ -z "${GEMINI_API_KEY:-}" ] && [ -n "${GOOGLE_API_KEY:-}" ]; then
+        gemini_auth_type="vertex-ai"
+        export GOOGLE_GENAI_USE_VERTEXAI="${GOOGLE_GENAI_USE_VERTEXAI:-true}"
+      fi
+      GEMINI_CLI_AUTH_TYPE="$gemini_auth_type" node <<'NODE'
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+const settingsPath = path.join(os.homedir(), ".gemini", "settings.json");
+let settings = {};
+try {
+  settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+} catch {}
+settings.security = settings.security && typeof settings.security === "object" ? settings.security : {};
+settings.security.auth =
+  settings.security.auth && typeof settings.security.auth === "object" ? settings.security.auth : {};
+settings.security.auth.selectedType = process.env.GEMINI_CLI_AUTH_TYPE;
+settings.security.auth.enforcedType = process.env.GEMINI_CLI_AUTH_TYPE;
+fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+NODE
+      echo "Using Gemini CLI auth type $gemini_auth_type"
+    fi
+    ;;
+  opencode)
+    if [ ! -x "$NPM_CONFIG_PREFIX/bin/opencode" ]; then
+      run_setup_command npm install -g opencode-ai
+    fi
+    export OPENCODE_CONFIG_CONTENT="$(
+      node -e 'process.stdout.write(JSON.stringify({model: process.env.ACTAGENT_LIVE_ACP_BIND_OPENCODE_MODEL || "opencode/kimi-k2.6"}))'
+    )"
+    ;;
+  *)
+    echo "Unsupported ACTAGENT_LIVE_ACP_BIND_AGENT: $agent" >&2
+    exit 1
+    ;;
+esac
+tmp_dir="$(mktemp -d)"
+trusted_scripts_dir="${ACTAGENT_LIVE_DOCKER_SCRIPTS_DIR:-/src/scripts}"
+source "$trusted_scripts_dir/lib/live-docker-stage.sh"
+actagent_live_stage_source_tree "$tmp_dir"
+actagent_live_stage_node_modules "$tmp_dir"
+actagent_live_link_runtime_tree "$tmp_dir"
+actagent_live_stage_state_dir "$tmp_dir/.actagent-state"
+actagent_live_prepare_staged_config
+cd "$tmp_dir"
+export ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND="${ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND:-}"
+node scripts/test-live.mjs -- ${ACTAGENT_LIVE_ACP_BIND_TEST_FILES:-src/gateway/gateway-acp-bind.live.test.ts}
+EOF
+
+actagent_live_acp_bind_append_build_extension acpx
+ACTAGENT_LIVE_DOCKER_REPO_ROOT="$ROOT_DIR" "$TRUSTED_HARNESS_DIR/scripts/test-live-build-docker.sh"
+
+IFS=',' read -r -a ACP_AGENT_TOKENS <<<"$ACP_AGENT_LIST_RAW"
+ACP_AGENTS=()
+for token in "${ACP_AGENT_TOKENS[@]}"; do
+  agent="$(actagent_live_trim "$token")"
+  [[ -n "$agent" ]] || continue
+  actagent_live_acp_bind_resolve_auth_provider "$agent" >/dev/null
+  ACP_AGENTS+=("$agent")
+done
+
+if ((${#ACP_AGENTS[@]} == 0)); then
+  echo "No ACP bind agents selected. Use ACTAGENT_LIVE_ACP_BIND_AGENTS=claude,codex,droid,gemini,opencode." >&2
+  exit 1
+fi
+
+for ACP_AGENT in "${ACP_AGENTS[@]}"; do
+  AUTH_PROVIDER="$(actagent_live_acp_bind_resolve_auth_provider "$ACP_AGENT")"
+  AGENT_COMMAND="$(actagent_live_acp_bind_resolve_agent_command "$ACP_AGENT")"
+
+  AUTH_DIRS=()
+  AUTH_FILES=()
+  if [[ -n "${ACTAGENT_DOCKER_AUTH_DIRS:-}" ]]; then
+    while IFS= read -r auth_dir; do
+      [[ -n "$auth_dir" ]] || continue
+      AUTH_DIRS+=("$auth_dir")
+    done < <(actagent_live_collect_auth_dirs)
+    while IFS= read -r auth_file; do
+      [[ -n "$auth_file" ]] || continue
+      AUTH_FILES+=("$auth_file")
+    done < <(actagent_live_collect_auth_files)
+  else
+    while IFS= read -r auth_dir; do
+      [[ -n "$auth_dir" ]] || continue
+      AUTH_DIRS+=("$auth_dir")
+    done < <(actagent_live_collect_auth_dirs_from_csv "$AUTH_PROVIDER")
+    while IFS= read -r auth_file; do
+      [[ -n "$auth_file" ]] || continue
+      AUTH_FILES+=("$auth_file")
+    done < <(actagent_live_collect_auth_files_from_csv "$AUTH_PROVIDER")
+  fi
+
+  AUTH_DIRS_CSV=""
+  if ((${#AUTH_DIRS[@]} > 0)); then
+    AUTH_DIRS_CSV="$(actagent_live_join_csv "${AUTH_DIRS[@]}")"
+  fi
+  AUTH_FILES_CSV=""
+  if ((${#AUTH_FILES[@]} > 0)); then
+    AUTH_FILES_CSV="$(actagent_live_join_csv "${AUTH_FILES[@]}")"
+  fi
+
+  DOCKER_HOME_MOUNT=()
+  DOCKER_AUTH_PRESTAGED=0
+  if actagent_live_uses_managed_bind_dirs; then
+    DOCKER_HOME_DIR="$(mktemp -d "${RUNNER_TEMP:-/tmp}/actagent-docker-home.XXXXXX")"
+    TEMP_DIRS+=("$DOCKER_HOME_DIR")
+    actagent_live_prepare_bind_dir_for_container_user "$DOCKER_HOME_DIR"
+    DOCKER_HOME_MOUNT=(-v "$DOCKER_HOME_DIR":/home/node)
+    if [[ -f "$PROFILE_FILE" && -r "$PROFILE_FILE" ]]; then
+      actagent_live_stage_profile_into_home "$DOCKER_HOME_DIR" "$PROFILE_FILE"
+    fi
+  elif [[ -f "$PROFILE_FILE" && -r "$PROFILE_FILE" ]]; then
+    PROFILE_MOUNT=(-v "$PROFILE_FILE":/home/node/.profile:ro)
+  fi
+
+  if [[ -n "${DOCKER_HOME_DIR:-}" ]]; then
+    actagent_live_stage_auth_into_home "$DOCKER_HOME_DIR" "${AUTH_DIRS[@]}" --files "${AUTH_FILES[@]}"
+    DOCKER_AUTH_PRESTAGED=1
+  fi
+
+  if [[ "$ACP_AGENT" == "droid" ]]; then
+    actagent_live_acp_bind_load_factory_api_key_from_profile
+  fi
+  if [[ "$ACP_AGENT" == "droid" && -z "${FACTORY_API_KEY:-}" ]]; then
+    echo "==> Run ACP bind live test in Docker"
+    echo "==> Agent: $ACP_AGENT"
+    echo "==> Profile file: $PROFILE_STATUS"
+    echo "==> Auth dirs: ${AUTH_DIRS_CSV:-none}"
+    echo "==> Auth files: ${AUTH_FILES_CSV:-none}"
+    echo "ERROR: Droid Docker ACP bind requires FACTORY_API_KEY; Factory OAuth/keyring auth in ~/.factory is not portable into the container." >&2
+    exit 1
+  fi
+
+  EXTERNAL_AUTH_MOUNTS=()
+  if ((${#AUTH_DIRS[@]} > 0)); then
+    for auth_dir in "${AUTH_DIRS[@]}"; do
+      auth_dir="$(actagent_live_validate_relative_home_path "$auth_dir")"
+      host_path="$HOME/$auth_dir"
+      if [[ -d "$host_path" ]]; then
+        EXTERNAL_AUTH_MOUNTS+=(-v "$host_path":/host-auth/"$auth_dir":ro)
+      fi
+    done
+  fi
+  if ((${#AUTH_FILES[@]} > 0)); then
+    for auth_file in "${AUTH_FILES[@]}"; do
+      auth_file="$(actagent_live_validate_relative_home_path "$auth_file")"
+      host_path="$HOME/$auth_file"
+      if [[ -f "$host_path" ]]; then
+        EXTERNAL_AUTH_MOUNTS+=(-v "$host_path":/host-auth-files/"$auth_file":ro)
+      fi
+    done
+  fi
+
+  echo "==> Run ACP bind live test in Docker"
+  echo "==> Agent: $ACP_AGENT"
+  echo "==> Test files: ${ACTAGENT_LIVE_ACP_BIND_TEST_FILES:-src/gateway/gateway-acp-bind.live.test.ts}"
+  echo "==> Profile file: $PROFILE_STATUS"
+  echo "==> Auth dirs: ${AUTH_DIRS_CSV:-none}"
+  echo "==> Auth files: ${AUTH_FILES_CSV:-none}"
+  if actagent_live_uses_managed_bind_dirs; then
+    actagent_live_chown_bind_dirs_for_container_user \
+      "$LIVE_IMAGE_NAME" \
+      "$DOCKER_USER" \
+      "$CLI_TOOLS_DIR" \
+      "$CACHE_HOME_DIR" \
+      "${DOCKER_HOME_DIR:-}"
+  fi
+  DOCKER_RUN_ARGS=()
+  actagent_live_init_docker_run_args DOCKER_RUN_ARGS "${ACTAGENT_LIVE_ACP_BIND_DOCKER_RUN_TIMEOUT:-2700s}"
+  DOCKER_RUN_ARGS+=(--rm -t \
+    -u "$DOCKER_USER" \
+    --entrypoint bash \
+    -e ANTHROPIC_API_KEY \
+    -e ANTHROPIC_API_KEY_OLD \
+    -e ACTAGENT_LIVE_ACP_BIND_ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}" \
+    -e ACTAGENT_LIVE_ACP_BIND_ANTHROPIC_API_KEY_OLD="${ANTHROPIC_API_KEY_OLD:-}" \
+    -e GEMINI_API_KEY \
+    -e GOOGLE_API_KEY \
+    -e FACTORY_API_KEY \
+    -e OPENAI_API_KEY \
+    -e CODEX_API_KEY \
+    -e ACPX_AUTH_OPENAI_API_KEY \
+    -e ACPX_AUTH_CODEX_API_KEY \
+    -e OPENCODE_API_KEY \
+    -e OPENCODE_ZEN_API_KEY \
+    -e OPENCODE_CONFIG_CONTENT \
+    -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    -e HOME=/home/node \
+    -e NODE_OPTIONS="$(actagent_live_container_node_options)" \
+    -e ACTAGENT_SKIP_CHANNELS=1 \
+    -e ACTAGENT_VITEST_FS_MODULE_CACHE=0 \
+    -e ACTAGENT_DOCKER_AUTH_PRESTAGED="$DOCKER_AUTH_PRESTAGED" \
+    -e ACTAGENT_DOCKER_AUTH_DIRS_RESOLVED="$AUTH_DIRS_CSV" \
+    -e ACTAGENT_DOCKER_AUTH_FILES_RESOLVED="$AUTH_FILES_CSV" \
+    -e ACTAGENT_LIVE_DOCKER_SCRIPTS_DIR="${DOCKER_TRUSTED_HARNESS_CONTAINER_DIR}/scripts" \
+    -e ACTAGENT_LIVE_DOCKER_SOURCE_STAGE_MODE="${ACTAGENT_LIVE_DOCKER_SOURCE_STAGE_MODE:-copy}" \
+    -e ACTAGENT_LIVE_TEST=1 \
+    -e ACTAGENT_LIVE_ACP_BIND=1 \
+    -e ACTAGENT_LIVE_ACP_BIND_AGENT="$ACP_AGENT" \
+    -e ACTAGENT_LIVE_ACP_BIND_TEST_FILES="${ACTAGENT_LIVE_ACP_BIND_TEST_FILES:-}" \
+    -e ACTAGENT_LIVE_ACP_BIND_CODEX_MODEL="${ACTAGENT_LIVE_ACP_BIND_CODEX_MODEL:-}" \
+    -e ACTAGENT_LIVE_ACP_BIND_SETUP_TIMEOUT_SECONDS="${ACTAGENT_LIVE_ACP_BIND_SETUP_TIMEOUT_SECONDS:-180}" \
+    -e ACTAGENT_LIVE_ACP_BIND_OPENCODE_MODEL="${ACTAGENT_LIVE_ACP_BIND_OPENCODE_MODEL:-opencode/kimi-k2.6}" \
+    -e ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS="${ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS:-}" \
+    -e ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_AGENT="${ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_AGENT:-}" \
+    -e ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_CONNECT_TIMEOUT_MS="${ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_CONNECT_TIMEOUT_MS:-}" \
+    -e ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_MODEL="${ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_MODEL:-}" \
+    -e ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_THINKING="${ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_THINKING:-}" \
+    -e ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_TIMEOUT_MS="${ACTAGENT_LIVE_ACP_SPAWN_DEFAULTS_TIMEOUT_MS:-}" \
+    -e ACTAGENT_LIVE_ACP_BIND_AGENT_COMMAND="$AGENT_COMMAND")
+  actagent_live_append_array DOCKER_RUN_ARGS DOCKER_HOME_MOUNT
+  actagent_live_append_array DOCKER_RUN_ARGS DOCKER_TRUSTED_HARNESS_MOUNT
+  DOCKER_RUN_ARGS+=(\
+    -v "$CACHE_HOME_DIR":/home/node/.cache \
+    -v "$ROOT_DIR":/src:ro \
+    -v "$CONFIG_DIR":/home/node/.actagent \
+    -v "$WORKSPACE_DIR":/home/node/.actagent/workspace \
+    -v "$CLI_TOOLS_DIR":/home/node/.npm-global)
+  actagent_live_append_array DOCKER_RUN_ARGS EXTERNAL_AUTH_MOUNTS
+  actagent_live_append_array DOCKER_RUN_ARGS PROFILE_MOUNT
+  DOCKER_RUN_ARGS+=(\
+    "$LIVE_IMAGE_NAME" \
+    -lc "$LIVE_TEST_CMD")
+  "${DOCKER_RUN_ARGS[@]}"
+done

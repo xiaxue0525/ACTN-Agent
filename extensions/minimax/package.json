@@ -1,0 +1,15 @@
+{
+  "name": "@actagent/minimax-provider",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent MiniMax provider and OAuth plugin",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

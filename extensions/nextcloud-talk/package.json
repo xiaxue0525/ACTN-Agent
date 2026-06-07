@@ -1,0 +1,60 @@
+{
+  "name": "@actagent/nextcloud-talk",
+  "version": "2026.6.3",
+  "description": "ACTAgent Nextcloud Talk channel plugin for conversations.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "nextcloud-talk",
+      "label": "Nextcloud Talk",
+      "selectionLabel": "Nextcloud Talk (self-hosted)",
+      "docsPath": "/channels/nextcloud-talk",
+      "docsLabel": "nextcloud-talk",
+      "blurb": "Self-hosted chat via Nextcloud Talk webhook bots.",
+      "aliases": [
+        "nc-talk",
+        "nc"
+      ],
+      "order": 65,
+      "quickstartAllowFrom": true
+    },
+    "install": {
+      "npmSpec": "@actagent/nextcloud-talk",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.10"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2"
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true
+    }
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

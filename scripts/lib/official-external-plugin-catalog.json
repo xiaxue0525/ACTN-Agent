@@ -1,0 +1,264 @@
+{
+  "entries": [
+    {
+      "name": "@actagent/acpx",
+      "description": "ACTAgent ACP runtime backend",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "acpx",
+          "label": "ACPX Runtime"
+        },
+        "install": {
+          "npmSpec": "@actagent/acpx",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.4.25"
+        }
+      }
+    },
+    {
+      "name": "@actagent/brave-plugin",
+      "description": "ACTAgent Brave plugin",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "brave",
+          "label": "Brave"
+        },
+        "webSearchProviders": [
+          {
+            "id": "brave",
+            "label": "Brave Search",
+            "hint": "Brave Search web results.",
+            "onboardingScopes": ["text-inference"],
+            "credentialLabel": "Brave Search API key",
+            "envVars": ["BRAVE_API_KEY"],
+            "placeholder": "BSA...",
+            "signupUrl": "https://api-dashboard.search.brave.com/app/keys",
+            "docsUrl": "https://docs.actagent.ai/tools/brave-search",
+            "credentialPath": "plugins.entries.brave.config.webSearch.apiKey",
+            "autoDetectOrder": 10
+          }
+        ],
+        "install": {
+          "npmSpec": "@actagent/brave-plugin",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.4.10",
+          "allowInvalidConfigRecovery": true
+        }
+      }
+    },
+    {
+      "name": "@actagent/copilot",
+      "description": "ACTAgent GitHub Copilot agent runtime plugin",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "copilot",
+          "label": "GitHub Copilot agent runtime"
+        },
+        "install": {
+          "actagenthubSpec": "actagenthub:@actagent/copilot",
+          "npmSpec": "@actagent/copilot",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.5.28"
+        }
+      }
+    },
+    {
+      "name": "@actagent/diagnostics-otel",
+      "description": "ACTAgent diagnostics OpenTelemetry exporter",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "diagnostics-otel",
+          "label": "Diagnostics OpenTelemetry"
+        },
+        "install": {
+          "actagenthubSpec": "actagenthub:@actagent/diagnostics-otel",
+          "npmSpec": "@actagent/diagnostics-otel",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.4.25"
+        }
+      }
+    },
+    {
+      "name": "@actagent/diagnostics-prometheus",
+      "description": "ACTAgent diagnostics Prometheus exporter",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "diagnostics-prometheus",
+          "label": "Diagnostics Prometheus"
+        },
+        "install": {
+          "actagenthubSpec": "actagenthub:@actagent/diagnostics-prometheus",
+          "npmSpec": "@actagent/diagnostics-prometheus",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.4.25"
+        }
+      }
+    },
+    {
+      "name": "@actagent/diffs",
+      "description": "ACTAgent diff viewer plugin",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "diffs",
+          "label": "Diffs"
+        },
+        "install": {
+          "npmSpec": "@actagent/diffs",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.4.30"
+        }
+      }
+    },
+    {
+      "name": "@actagent/diffs-language-pack",
+      "description": "ACTAgent diffs viewer syntax highlighting language pack",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "diffs-language-pack",
+          "label": "Diff Viewer Language Pack"
+        },
+        "install": {
+          "npmSpec": "@actagent/diffs-language-pack",
+          "actagenthubSpec": "actagenthub:@actagent/diffs-language-pack",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.5.27"
+        }
+      }
+    },
+    {
+      "name": "@actagent/google-meet",
+      "description": "ACTAgent Google Meet participant plugin",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "google-meet",
+          "label": "Google Meet"
+        },
+        "install": {
+          "npmSpec": "@actagent/google-meet",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.4.20"
+        }
+      }
+    },
+    {
+      "name": "@actagent/lobster",
+      "description": "Lobster workflow tool plugin (typed pipelines + resumable approvals)",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "lobster",
+          "label": "Lobster"
+        },
+        "install": {
+          "npmSpec": "@actagent/lobster",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.4.25"
+        }
+      }
+    },
+    {
+      "name": "@actagent/memory-lancedb",
+      "description": "ACTAgent LanceDB-backed long-term memory plugin with auto-recall/capture",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "memory-lancedb",
+          "label": "Memory LanceDB"
+        },
+        "install": {
+          "npmSpec": "@actagent/memory-lancedb",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.5.31"
+        }
+      }
+    },
+    {
+      "name": "@actagent/openshell-sandbox",
+      "description": "ACTAgent OpenShell sandbox backend",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "openshell",
+          "label": "OpenShell Sandbox"
+        },
+        "install": {
+          "npmSpec": "@actagent/openshell-sandbox",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.5.12-beta.1"
+        }
+      }
+    },
+    {
+      "name": "@actagent/pixverse-provider",
+      "description": "ACTAgent PixVerse video generation provider plugin",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "pixverse",
+          "label": "PixVerse"
+        },
+        "install": {
+          "actagenthubSpec": "actagenthub:@actagent/pixverse-provider",
+          "npmSpec": "@actagent/pixverse-provider",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.5.26"
+        }
+      }
+    },
+    {
+      "name": "@actagent/tokenjuice",
+      "description": "ACTAgent tokenjuice exec output compaction plugin",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "tokenjuice",
+          "label": "Tokenjuice"
+        },
+        "install": {
+          "actagenthubSpec": "actagenthub:@actagent/tokenjuice",
+          "npmSpec": "@actagent/tokenjuice",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.5.28"
+        }
+      }
+    },
+    {
+      "name": "@actagent/voice-call",
+      "description": "ACTAgent voice-call plugin",
+      "source": "official",
+      "kind": "plugin",
+      "actagent": {
+        "plugin": {
+          "id": "voice-call",
+          "label": "Voice Call"
+        },
+        "install": {
+          "npmSpec": "@actagent/voice-call",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.4.10"
+        }
+      }
+    }
+  ]
+}

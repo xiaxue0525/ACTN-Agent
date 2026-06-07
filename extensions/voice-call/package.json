@@ -1,0 +1,48 @@
+{
+  "name": "@actagent/voice-call",
+  "version": "2026.6.3",
+  "description": "ACTAgent voice-call plugin for Twilio, Telnyx, and Plivo phone calls.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "dependencies": {
+    "commander": "14.0.3",
+    "typebox": "1.1.39",
+    "ws": "8.21.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "install": {
+      "npmSpec": "@actagent/voice-call",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.10"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2"
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true
+    }
+  }
+}

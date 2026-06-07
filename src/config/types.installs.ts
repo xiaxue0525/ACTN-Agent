@@ -1,0 +1,31 @@
+/** Base persisted install record shared by plugin and skill install tracking. */
+export type InstallRecordBase = {
+  source: "npm" | "archive" | "path" | "actagenthub" | "git";
+  spec?: string;
+  sourcePath?: string;
+  installPath?: string;
+  version?: string;
+  resolvedName?: string;
+  resolvedVersion?: string;
+  resolvedSpec?: string;
+  integrity?: string;
+  shasum?: string;
+  resolvedAt?: string;
+  installedAt?: string;
+  actagenthubUrl?: string;
+  actagenthubPackage?: string;
+  actagenthubFamily?: "code-plugin" | "bundle-plugin";
+  actagenthubChannel?: "official" | "community" | "private";
+  artifactKind?: "legacy-zip" | "npm-pack";
+  artifactFormat?: "zip" | "tgz";
+  npmIntegrity?: string;
+  npmShasum?: string;
+  npmTarballName?: string;
+  actagentpackSha256?: string;
+  actagentpackSpecVersion?: number;
+  actagentpackManifestSha256?: string;
+  actagentpackSize?: number;
+  gitUrl?: string;
+  gitRef?: string;
+  gitCommit?: string;
+};

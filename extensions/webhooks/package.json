@@ -1,0 +1,18 @@
+{
+  "name": "@actagent/webhooks",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent webhook bridge plugin",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

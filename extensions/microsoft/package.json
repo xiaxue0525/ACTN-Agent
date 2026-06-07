@@ -1,0 +1,18 @@
+{
+  "name": "@actagent/microsoft-speech",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Microsoft speech plugin",
+  "type": "module",
+  "dependencies": {
+    "node-edge-tts": "1.2.10"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

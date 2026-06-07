@@ -1,0 +1,15 @@
+{
+  "name": "@actagent/alibaba-provider",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Alibaba Model Studio video provider plugin",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

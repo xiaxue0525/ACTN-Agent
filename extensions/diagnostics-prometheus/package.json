@@ -1,0 +1,34 @@
+{
+  "name": "@actagent/diagnostics-prometheus",
+  "version": "2026.6.3",
+  "description": "ACTAgent diagnostics Prometheus exporter for runtime metrics.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "install": {
+      "actagenthubSpec": "actagenthub:@actagent/diagnostics-prometheus",
+      "npmSpec": "@actagent/diagnostics-prometheus",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.25"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2"
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true
+    }
+  }
+}

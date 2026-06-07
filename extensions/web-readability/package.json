@@ -1,0 +1,19 @@
+{
+  "name": "@actagent/web-readability-plugin",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent local Readability web extraction plugin",
+  "type": "module",
+  "dependencies": {
+    "@mozilla/readability": "0.6.0",
+    "linkedom": "0.18.12"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

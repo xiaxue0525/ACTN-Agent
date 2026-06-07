@@ -1,0 +1,13 @@
+{
+  "mode": "local",
+  "port": 19199,
+  "bind": "loopback",
+  "auth": {
+    "mode": "token",
+    "token": {
+      "source": "env",
+      "provider": "default",
+      "id": "GATEWAY_AUTH_TOKEN_REF"
+    }
+  }
+}

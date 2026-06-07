@@ -1,0 +1,18 @@
+{
+  "name": "@actagent/document-extract-plugin",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent local document extraction plugin",
+  "type": "module",
+  "dependencies": {
+    "clawpdf": "0.3.0"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

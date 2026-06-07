@@ -1,0 +1,21 @@
+{
+  "name": "@actagent/codex-supervisor",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Codex app-server fleet supervision plugin.",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "typebox": "1.1.39",
+    "ws": "8.21.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "name": "@actagent/zalo",
+  "version": "2026.6.3",
+  "description": "ACTAgent Zalo channel plugin for bot and webhook chats.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "zalo",
+      "label": "Zalo",
+      "selectionLabel": "Zalo (Bot API)",
+      "docsPath": "/channels/zalo",
+      "docsLabel": "zalo",
+      "blurb": "Vietnam-focused messaging platform with Bot API.",
+      "aliases": [
+        "zl"
+      ],
+      "order": 80,
+      "quickstartAllowFrom": true
+    },
+    "install": {
+      "npmSpec": "@actagent/zalo",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.10"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2"
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true
+    }
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

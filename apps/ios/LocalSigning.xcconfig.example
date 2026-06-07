@@ -1,0 +1,17 @@
+// Copy to LocalSigning.xcconfig for personal local signing overrides.
+// This file is only an example and should stay committed.
+
+ACTAGENT_CODE_SIGN_STYLE = Automatic
+ACTAGENT_DEVELOPMENT_TEAM = YOUR_TEAM_ID
+
+ACTAGENT_APP_BUNDLE_ID = ai.actagent.client
+ACTAGENT_SHARE_BUNDLE_ID = ai.actagent.client.share
+ACTAGENT_ACTIVITY_WIDGET_BUNDLE_ID = ai.actagent.client.activitywidget
+ACTAGENT_WATCH_APP_BUNDLE_ID = ai.actagent.client.watchkitapp
+ACTAGENT_WATCH_EXTENSION_BUNDLE_ID = ai.actagent.client.watchkitapp.extension
+
+// Leave empty with automatic signing.
+ACTAGENT_APP_PROFILE =
+ACTAGENT_SHARE_PROFILE =
+ACTAGENT_WATCH_APP_PROFILE =
+ACTAGENT_WATCH_EXTENSION_PROFILE =

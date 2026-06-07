@@ -1,0 +1,37 @@
+{
+  "name": "@actagent/openshell-sandbox",
+  "version": "2026.6.3",
+  "description": "ACTAgent sandbox backend for the NVIDIA OpenShell CLI with mirrored local workspaces and SSH command execution.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "install": {
+      "npmSpec": "@actagent/openshell-sandbox",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.5.12-beta.1"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2",
+      "bundledDist": false
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true
+    }
+  }
+}

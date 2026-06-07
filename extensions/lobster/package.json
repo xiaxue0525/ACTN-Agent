@@ -1,0 +1,37 @@
+{
+  "name": "@actagent/lobster",
+  "version": "2026.6.3",
+  "description": "Lobster workflow tool plugin for typed pipelines and resumable approvals.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "dependencies": {
+    "@actagentdbot/lobster": "2026.5.22",
+    "typebox": "1.1.39"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "install": {
+      "npmSpec": "@actagent/lobster",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.25"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2"
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true
+    }
+  }
+}

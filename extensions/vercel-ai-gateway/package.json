@@ -1,0 +1,15 @@
+{
+  "name": "@actagent/vercel-ai-gateway-provider",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Vercel AI Gateway provider plugin",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

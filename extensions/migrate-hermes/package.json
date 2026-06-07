@@ -1,0 +1,27 @@
+{
+  "name": "@actagent/migrate-hermes",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "Hermes to ACTAgent migration provider",
+  "type": "module",
+  "dependencies": {
+    "yaml": "2.9.0"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

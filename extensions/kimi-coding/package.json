@@ -1,0 +1,15 @@
+{
+  "name": "@actagent/kimi-provider",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Kimi provider plugin",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

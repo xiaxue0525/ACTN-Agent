@@ -1,0 +1,15 @@
+{
+  "name": "@actagent/microsoft-foundry",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Microsoft Foundry provider plugin",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

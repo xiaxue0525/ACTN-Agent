@@ -1,0 +1,27 @@
+{
+  "name": "@actagent/workboard",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent dashboard workboard plugin",
+  "type": "module",
+  "dependencies": {
+    "typebox": "1.1.39"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

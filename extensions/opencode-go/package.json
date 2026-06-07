@@ -1,0 +1,15 @@
+{
+  "name": "@actagent/opencode-go-provider",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent OpenCode Go provider plugin",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

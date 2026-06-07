@@ -1,0 +1,15 @@
+{
+  "name": "@actagent/admin-http-rpc",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent admin HTTP RPC endpoint",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

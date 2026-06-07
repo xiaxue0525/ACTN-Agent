@@ -1,0 +1,40 @@
+{
+  "name": "@actagent/codex",
+  "version": "2026.6.3",
+  "description": "ACTAgent Codex app-server harness and model provider plugin with a Codex-managed GPT catalog.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "dependencies": {
+    "@openai/codex": "0.135.0",
+    "typebox": "1.1.39",
+    "ws": "8.21.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "install": {
+      "npmSpec": "@actagent/codex",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.5.1-beta.1"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2"
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true,
+      "bundleRuntimeDependencies": false
+    }
+  }
+}

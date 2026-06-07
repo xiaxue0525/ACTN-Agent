@@ -1,0 +1,24 @@
+{
+  "name": "@actagent/browser-plugin",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent browser tool plugin",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "commander": "14.0.3",
+    "express": "5.2.1",
+    "playwright-core": "1.60.0",
+    "typebox": "1.1.39",
+    "ws": "8.21.0"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "undici": "8.3.0"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

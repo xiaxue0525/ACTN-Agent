@@ -1,0 +1,25 @@
+// Shared iOS signing defaults for local development + CI.
+#include "Version.xcconfig"
+
+ACTAGENT_IOS_DEFAULT_TEAM = Y5PE65HELJ
+ACTAGENT_IOS_SELECTED_TEAM = $(ACTAGENT_IOS_DEFAULT_TEAM)
+ACTAGENT_DEVELOPMENT_TEAM = $(ACTAGENT_IOS_SELECTED_TEAM)
+ACTAGENT_CODE_SIGN_STYLE = Automatic
+ACTAGENT_APP_BUNDLE_ID = ai.actagent.client
+ACTAGENT_WATCH_APP_BUNDLE_ID = ai.actagent.client.watchkitapp
+ACTAGENT_WATCH_EXTENSION_BUNDLE_ID = ai.actagent.client.watchkitapp.extension
+ACTAGENT_ACTIVITY_WIDGET_BUNDLE_ID = ai.actagent.client.activitywidget
+ACTAGENT_WATCH_APP_PROFILE =
+ACTAGENT_WATCH_EXTENSION_PROFILE =
+
+// Local contributors can override this by running scripts/ios-configure-signing.sh.
+// Keep include after defaults: xcconfig is evaluated top-to-bottom.
+#include? "../.local-signing.xcconfig"
+#include? "../LocalSigning.xcconfig"
+
+CODE_SIGN_STYLE = $(ACTAGENT_CODE_SIGN_STYLE)
+CODE_SIGN_IDENTITY = Apple Development
+DEVELOPMENT_TEAM = $(ACTAGENT_DEVELOPMENT_TEAM)
+
+// Let Xcode manage provisioning for the selected local team unless a local override pins one.
+PROVISIONING_PROFILE_SPECIFIER =

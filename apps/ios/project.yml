@@ -1,0 +1,366 @@
+name: ACTAgent
+options:
+  bundleIdPrefix: ai.actagent
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+
+packages:
+  ACTAgentKit:
+    path: ../shared/ACTAgentKit
+  Swabble:
+    path: ../swabble
+  WebRTC:
+    url: https://github.com/stasel/WebRTC.git
+    exactVersion: 147.0.0
+
+schemes:
+  ACTAgent:
+    shared: true
+    build:
+      targets:
+        ACTAgent: all
+    test:
+      targets:
+        - ACTAgentTests
+        - ACTAgentLogicTests
+  ACTAgentLogicTests:
+    shared: true
+    build:
+      targets:
+        ACTAgentLogicTests: all
+    test:
+      targets:
+        - ACTAgentLogicTests
+
+targets:
+  ACTAgent:
+    type: application
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Sources
+    dependencies:
+      - target: ACTAgentShareExtension
+        embed: true
+      - target: ACTAgentActivityWidget
+        embed: true
+      - target: ACTAgentWatchApp
+      - package: ACTAgentKit
+      - package: ACTAgentKit
+        product: ACTAgentChatUI
+      - package: ACTAgentKit
+        product: ACTAgentProtocol
+      - package: Swabble
+        product: SwabbleKit
+      - package: WebRTC
+      - sdk: AppIntents.framework
+    preBuildScripts:
+      - name: SwiftFormat (lint)
+        basedOnDependencyAnalysis: false
+        inputFileLists:
+          - $(SRCROOT)/SwiftSources.input.xcfilelist
+        script: |
+          set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftformat >/dev/null 2>&1; then
+            echo "error: swiftformat not found (brew install swiftformat)" >&2
+            exit 1
+          fi
+          swiftformat --lint --config "$SRCROOT/../../config/swiftformat" \
+            --unexclude "$SRCROOT/Sources,$SRCROOT/ShareExtension,$SRCROOT/ActivityWidget,$SRCROOT/WatchExtension,$SRCROOT/../shared/ACTAgentKit,$SRCROOT/../swabble" \
+            --filelist "$SRCROOT/SwiftSources.input.xcfilelist"
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        inputFileLists:
+          - $(SRCROOT)/SwiftSources.input.xcfilelist
+        script: |
+          set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftlint >/dev/null 2>&1; then
+            echo "error: swiftlint not found (brew install swiftlint)" >&2
+            exit 1
+          fi
+          swiftlint lint --config "$SRCROOT/.swiftlint.yml" --use-script-input-file-lists
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_ENTITLEMENTS: Sources/ACTAgent.entitlements
+        CODE_SIGN_STYLE: "$(ACTAGENT_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(ACTAGENT_APP_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(ACTAGENT_APP_PROFILE)"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SUPPORTS_LIVE_ACTIVITIES: YES
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+      configs:
+        Debug:
+          ACTAGENT_PUSH_TRANSPORT: direct
+          ACTAGENT_PUSH_DISTRIBUTION: local
+          ACTAGENT_PUSH_RELAY_BASE_URL: ""
+          ACTAGENT_PUSH_APNS_ENVIRONMENT: sandbox
+        Release:
+          ACTAGENT_PUSH_TRANSPORT: direct
+          ACTAGENT_PUSH_DISTRIBUTION: local
+          ACTAGENT_PUSH_RELAY_BASE_URL: ""
+          ACTAGENT_PUSH_APNS_ENVIRONMENT: production
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: ACTAgent
+        CFBundleIconName: AppIcon
+        CFBundleURLTypes:
+          - CFBundleURLName: ai.actagent.ios
+            CFBundleURLSchemes:
+              - actagent
+        CFBundleShortVersionString: "$(ACTAGENT_MARKETING_VERSION)"
+        ACTAgentCanonicalVersion: "$(ACTAGENT_IOS_VERSION)"
+        CFBundleVersion: "$(ACTAGENT_BUILD_VERSION)"
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIBackgroundModes:
+          - audio
+          - remote-notification
+        BGTaskSchedulerPermittedIdentifiers:
+          - ai.actagent.ios.bgrefresh
+        NSLocalNetworkUsageDescription: ACTAgent discovers and connects to your ACTAgent gateway on the local network.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoadsInWebContent: true
+          NSAllowsLocalNetworking: true
+        NSBonjourServices:
+          - _actagent-gw._tcp
+        NSCameraUsageDescription: ACTAgent can capture photos or short video clips when requested via the gateway.
+        NSCalendarsUsageDescription: ACTAgent uses your calendars to show events and scheduling context when you enable calendar access.
+        NSCalendarsFullAccessUsageDescription: ACTAgent uses your calendars to show events and scheduling context when you enable calendar access.
+        NSCalendarsWriteOnlyAccessUsageDescription: ACTAgent uses your calendars to add events when you enable calendar access.
+        NSContactsUsageDescription: ACTAgent uses your contacts so you can search and reference people while using the assistant.
+        NSLocationWhenInUseUsageDescription: ACTAgent uses your location when you allow location sharing.
+        NSLocationAlwaysAndWhenInUseUsageDescription: ACTAgent can share your location in the background when you enable Always.
+        NSMicrophoneUsageDescription: ACTAgent uses the microphone for realtime chat, voice wake, and push-to-talk.
+        NSMotionUsageDescription: ACTAgent may use motion data to support device-aware interactions and automations.
+        NSPhotoLibraryUsageDescription: ACTAgent needs photo library access when you choose existing photos to share with your assistant.
+        NSRemindersFullAccessUsageDescription: ACTAgent uses your reminders to list, add, and complete tasks when you enable reminders access.
+        NSSpeechRecognitionUsageDescription: ACTAgent uses on-device speech recognition for talk mode and voice wake.
+        NSSupportsLiveActivities: true
+        ITSAppUsesNonExemptEncryption: false
+        ACTAgentPushTransport: "$(ACTAGENT_PUSH_TRANSPORT)"
+        ACTAgentPushDistribution: "$(ACTAGENT_PUSH_DISTRIBUTION)"
+        ACTAgentPushRelayBaseURL: "$(ACTAGENT_PUSH_RELAY_BASE_URL)"
+        ACTAgentPushAPNsEnvironment: "$(ACTAGENT_PUSH_APNS_ENVIRONMENT)"
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+
+  ACTAgentShareExtension:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: ShareExtension
+    dependencies:
+      - package: ACTAgentKit
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(ACTAGENT_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        PRODUCT_BUNDLE_IDENTIFIER: "$(ACTAGENT_SHARE_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(ACTAGENT_SHARE_PROFILE)"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: ACTAgent Share
+        CFBundleShortVersionString: "$(ACTAGENT_MARKETING_VERSION)"
+        CFBundleVersion: "$(ACTAGENT_BUILD_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController"
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsImageWithMaxCount: 10
+              NSExtensionActivationSupportsMovieWithMaxCount: 1
+
+  ACTAgentActivityWidget:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: ActivityWidget
+      - path: Sources/LiveActivity/ACTAgentActivityAttributes.swift
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: ActivityKit.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(ACTAGENT_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(ACTAGENT_ACTIVITY_WIDGET_BUNDLE_ID)"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SUPPORTS_LIVE_ACTIVITIES: YES
+    info:
+      path: ActivityWidget/Info.plist
+      properties:
+        CFBundleDisplayName: ACTAgent Activity
+        CFBundleShortVersionString: "$(ACTAGENT_MARKETING_VERSION)"
+        CFBundleVersion: "$(ACTAGENT_BUILD_VERSION)"
+        NSSupportsLiveActivities: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  ACTAgentWatchApp:
+    type: application.watchapp2
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: WatchApp
+    dependencies:
+      - target: ACTAgentWatchExtension
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    attributes:
+      DevelopmentTeam: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+      ProvisioningStyle: "$(ACTAGENT_CODE_SIGN_STYLE)"
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(ACTAGENT_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        PRODUCT_BUNDLE_IDENTIFIER: "$(ACTAGENT_WATCH_APP_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(ACTAGENT_WATCH_APP_PROFILE)"
+    info:
+      path: WatchApp/Info.plist
+      properties:
+        CFBundleDisplayName: ACTAgent
+        CFBundleShortVersionString: "$(ACTAGENT_MARKETING_VERSION)"
+        CFBundleVersion: "$(ACTAGENT_BUILD_VERSION)"
+        WKCompanionAppBundleIdentifier: "$(ACTAGENT_APP_BUNDLE_ID)"
+        WKWatchKitApp: true
+
+  ACTAgentWatchExtension:
+    type: watchkit2-extension
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: WatchExtension/Sources
+    dependencies:
+      - sdk: AppIntents.framework
+      - sdk: WatchConnectivity.framework
+      - sdk: UserNotifications.framework
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    attributes:
+      DevelopmentTeam: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+      ProvisioningStyle: "$(ACTAGENT_CODE_SIGN_STYLE)"
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(ACTAGENT_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(ACTAGENT_WATCH_EXTENSION_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(ACTAGENT_WATCH_EXTENSION_PROFILE)"
+    info:
+      path: WatchExtension/Info.plist
+      properties:
+        CFBundleDisplayName: ACTAgent
+        CFBundleShortVersionString: "$(ACTAGENT_MARKETING_VERSION)"
+        CFBundleVersion: "$(ACTAGENT_BUILD_VERSION)"
+        NSExtension:
+          NSExtensionAttributes:
+            WKAppBundleIdentifier: "$(ACTAGENT_WATCH_APP_BUNDLE_ID)"
+          NSExtensionPointIdentifier: com.apple.watchkit
+
+  ACTAgentTests:
+    type: bundle.unit-test
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Tests
+        excludes:
+          - Logic
+    dependencies:
+      - target: ACTAgent
+      - package: Swabble
+        product: SwabbleKit
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(ACTAGENT_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: ai.actagent.ios.tests
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/ACTAgent.app/ACTAgent"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+    info:
+      path: Tests/Info.plist
+      properties:
+        CFBundleDisplayName: ACTAgentTests
+        CFBundleShortVersionString: "$(ACTAGENT_MARKETING_VERSION)"
+        CFBundleVersion: "$(ACTAGENT_BUILD_VERSION)"
+
+  ACTAgentLogicTests:
+    type: bundle.unit-test
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Tests/Logic
+    dependencies:
+      - package: ACTAgentKit
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(ACTAGENT_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(ACTAGENT_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: ai.actagent.ios.logic-tests
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        SWIFT_EMIT_CONST_VALUE_PROTOCOLS: ""
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: Tests/Info.plist
+      properties:
+        CFBundleDisplayName: ACTAgentLogicTests
+        CFBundleShortVersionString: "$(ACTAGENT_MARKETING_VERSION)"
+        CFBundleVersion: "$(ACTAGENT_BUILD_VERSION)"

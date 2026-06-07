@@ -1,0 +1,18 @@
+{
+  "name": "@actagent/openai-provider",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent OpenAI provider plugins",
+  "type": "module",
+  "dependencies": {
+    "ws": "8.21.0"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

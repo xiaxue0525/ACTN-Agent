@@ -1,0 +1,29 @@
+{
+  "name": "@actagent/memory-wiki",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent persistent wiki plugin",
+  "type": "module",
+  "dependencies": {
+    "typebox": "1.1.39",
+    "yaml": "2.9.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

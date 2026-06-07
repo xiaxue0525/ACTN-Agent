@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: actagent
+  labels:
+    app: actagent
+spec:
+  type: ClusterIP
+  selector:
+    app: actagent
+  ports:
+    - name: gateway
+      port: 19199
+      targetPort: 19199
+      protocol: TCP

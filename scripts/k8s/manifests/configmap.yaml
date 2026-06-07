@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: actagent-config
+  labels:
+    app: actagent
+data:
+  actagent.json: |
+    {
+      "gateway": {
+        "mode": "local",
+        "bind": "loopback",
+        "port": 19199,
+        "auth": {
+          "mode": "token"
+        },
+        "controlUi": {
+          "enabled": true
+        }
+      },
+      "agents": {
+        "defaults": {
+          "workspace": "~/.actagent/workspace"
+        },
+        "list": [
+          {
+            "id": "default",
+            "name": "ACTAgent Assistant",
+            "workspace": "~/.actagent/workspace"
+          }
+        ]
+      },
+      "cron": { "enabled": false }
+    }
+  AGENTS.md: |
+    # ACTAgent Assistant
+
+    You are a helpful AI assistant running in Kubernetes.

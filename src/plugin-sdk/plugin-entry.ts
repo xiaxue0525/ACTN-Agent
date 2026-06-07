@@ -1,0 +1,333 @@
+// Plugin entry contracts define the manifest-facing hooks implemented by plugin packages.
+import type { ACTAgentConfig } from "../config/types.actagent.js";
+import { emptyPluginConfigSchema } from "../plugins/config-schema.js";
+import type {
+  AnyAgentTool,
+  AgentHarness,
+  AgentPromptGuidance,
+  AgentPromptGuidanceEntry,
+  AgentPromptSurfaceKind,
+  MediaUnderstandingProviderPlugin,
+  TranscriptSourceProvider,
+  MigrationApplyResult,
+  MigrationDetection,
+  MigrationItem,
+  MigrationPlan,
+  MigrationProviderContext,
+  MigrationProviderPlugin,
+  MigrationSummary,
+  ACTAgentPluginApi,
+  ACTAgentPluginCommandDefinition,
+  ACTAgentPluginConfigSchema,
+  ACTAgentPluginDefinition,
+  ACTAgentPluginHttpRouteHandler,
+  ACTAgentPluginNodeHostCommand,
+  ACTAgentPluginNodeInvokePolicy,
+  ACTAgentPluginNodeInvokePolicyContext,
+  ACTAgentPluginNodeInvokePolicyResult,
+  ACTAgentPluginReloadRegistration,
+  ACTAgentPluginSecurityAuditCollector,
+  ACTAgentPluginSecurityAuditContext,
+  ACTAgentPluginService,
+  ACTAgentPluginServiceContext,
+  ACTAgentPluginToolContext,
+  ACTAgentPluginToolFactory,
+  PluginLogger,
+  ProviderAugmentModelCatalogContext,
+  ProviderAuthContext,
+  ProviderAuthDoctorHintContext,
+  ProviderAuthMethod,
+  ProviderAuthMethodNonInteractiveContext,
+  ProviderAuthResult,
+  ProviderApplyConfigDefaultsContext,
+  ProviderBuildMissingAuthMessageContext,
+  ProviderBuildUnknownModelHintContext,
+  ProviderBuiltInModelSuppressionContext,
+  ProviderBuiltInModelSuppressionResult,
+  ProviderCacheTtlEligibilityContext,
+  ProviderCatalogContext,
+  ProviderCatalogResult,
+  ProviderDeferSyntheticProfileAuthContext,
+  ProviderDefaultThinkingPolicyContext,
+  ProviderDiscoveryContext,
+  ProviderFailoverErrorContext,
+  ProviderFetchUsageSnapshotContext,
+  ProviderModernModelPolicyContext,
+  ProviderNormalizeConfigContext,
+  ProviderNormalizeToolSchemasContext,
+  ProviderNormalizeTransportContext,
+  ProviderResolveConfigApiKeyContext,
+  ProviderNormalizeModelIdContext,
+  ProviderNormalizeResolvedModelContext,
+  ProviderPrepareDynamicModelContext,
+  ProviderPrepareExtraParamsContext,
+  ProviderPrepareRuntimeAuthContext,
+  ProviderPreparedRuntimeAuth,
+  ProviderReasoningOutputMode,
+  ProviderReasoningOutputModeContext,
+  ProviderReplayPolicy,
+  ProviderReplayPolicyContext,
+  ProviderReplaySessionEntry,
+  ProviderReplaySessionState,
+  RealtimeTranscriptionProviderPlugin,
+  ProviderResolvedUsageAuth,
+  ProviderUsageAuthToken,
+  ProviderResolveDynamicModelContext,
+  ProviderResolveTransportTurnStateContext,
+  ProviderResolveWebSocketSessionPolicyContext,
+  ProviderSanitizeReplayHistoryContext,
+  ProviderTransportTurnState,
+  ProviderToolSchemaDiagnostic,
+  ProviderResolveUsageAuthContext,
+  ProviderThinkingProfile,
+  ProviderThinkingPolicyContext,
+  ProviderValidateReplayTurnsContext,
+  ProviderWebSocketSessionPolicy,
+  ProviderWrapStreamFnContext,
+  UnifiedModelCatalogProviderContext,
+  UnifiedModelCatalogProviderPlugin,
+  ACTAgentGatewayDiscoveryAdvertiseContext,
+  ACTAgentGatewayDiscoveryService,
+  SpeechProviderPlugin,
+  PluginCommandContext,
+  PluginCommandResult,
+  PluginAgentEventEmitParams,
+  PluginAgentEventEmitResult,
+  PluginAgentEventSubscriptionRegistration,
+  PluginAgentTurnPrepareEvent,
+  PluginAgentTurnPrepareResult,
+  PluginControlUiDescriptor,
+  PluginHeartbeatPromptContributionEvent,
+  PluginHeartbeatPromptContributionResult,
+  PluginJsonValue,
+  PluginNextTurnInjection,
+  PluginNextTurnInjectionEnqueueResult,
+  PluginNextTurnInjectionRecord,
+  PluginRunContextGetParams,
+  PluginRunContextPatch,
+  PluginRuntimeLifecycleRegistration,
+  PluginSessionActionContext,
+  PluginSessionActionRegistration,
+  PluginSessionActionResult,
+  PluginSessionAttachmentParams,
+  PluginSessionAttachmentResult,
+  PluginSessionSchedulerJobHandle,
+  PluginSessionSchedulerJobRegistration,
+  PluginSessionTurnScheduleParams,
+  PluginSessionTurnUnscheduleByTagParams,
+  PluginSessionTurnUnscheduleByTagResult,
+  PluginSessionExtensionRegistration,
+  PluginSessionExtensionProjection,
+  PluginToolMetadataRegistration,
+  PluginTrustedToolPolicyRegistration,
+} from "../plugins/types.js";
+import { createCachedLazyValueGetter } from "./lazy-value.js";
+
+export type {
+  AnyAgentTool,
+  AgentHarness,
+  AgentPromptGuidance,
+  AgentPromptGuidanceEntry,
+  AgentPromptSurfaceKind,
+  MediaUnderstandingProviderPlugin,
+  TranscriptSourceProvider,
+  MigrationApplyResult,
+  MigrationDetection,
+  MigrationItem,
+  MigrationPlan,
+  MigrationProviderContext,
+  MigrationProviderPlugin,
+  MigrationSummary,
+  ACTAgentPluginApi,
+  ACTAgentPluginNodeHostCommand,
+  ACTAgentPluginNodeInvokePolicy,
+  ACTAgentPluginNodeInvokePolicyContext,
+  ACTAgentPluginNodeInvokePolicyResult,
+  ACTAgentPluginReloadRegistration,
+  ACTAgentPluginSecurityAuditCollector,
+  ACTAgentPluginSecurityAuditContext,
+  ACTAgentPluginToolContext,
+  ACTAgentPluginToolFactory,
+  PluginCommandContext,
+  PluginCommandResult,
+  PluginAgentEventEmitParams,
+  PluginAgentEventEmitResult,
+  PluginAgentEventSubscriptionRegistration,
+  PluginAgentTurnPrepareEvent,
+  PluginAgentTurnPrepareResult,
+  PluginControlUiDescriptor,
+  PluginHeartbeatPromptContributionEvent,
+  PluginHeartbeatPromptContributionResult,
+  PluginJsonValue,
+  PluginNextTurnInjection,
+  PluginNextTurnInjectionEnqueueResult,
+  PluginNextTurnInjectionRecord,
+  PluginRunContextGetParams,
+  PluginRunContextPatch,
+  PluginRuntimeLifecycleRegistration,
+  PluginSessionActionContext,
+  PluginSessionActionRegistration,
+  PluginSessionActionResult,
+  PluginSessionSchedulerJobHandle,
+  PluginSessionSchedulerJobRegistration,
+  PluginSessionAttachmentParams,
+  PluginSessionAttachmentResult,
+  PluginSessionTurnScheduleParams,
+  PluginSessionTurnUnscheduleByTagParams,
+  PluginSessionTurnUnscheduleByTagResult,
+  PluginSessionExtensionRegistration,
+  PluginSessionExtensionProjection,
+  PluginToolMetadataRegistration,
+  PluginTrustedToolPolicyRegistration,
+  ACTAgentPluginConfigSchema,
+  ACTAgentPluginHttpRouteHandler,
+  ProviderDiscoveryContext,
+  ProviderCatalogContext,
+  ProviderCatalogResult,
+  ProviderDeferSyntheticProfileAuthContext,
+  ProviderAugmentModelCatalogContext,
+  ProviderApplyConfigDefaultsContext,
+  ProviderBuiltInModelSuppressionContext,
+  ProviderBuiltInModelSuppressionResult,
+  ProviderBuildMissingAuthMessageContext,
+  ProviderBuildUnknownModelHintContext,
+  ProviderCacheTtlEligibilityContext,
+  ProviderDefaultThinkingPolicyContext,
+  ProviderFetchUsageSnapshotContext,
+  ProviderFailoverErrorContext,
+  ProviderModernModelPolicyContext,
+  ProviderNormalizeConfigContext,
+  ProviderNormalizeToolSchemasContext,
+  ProviderNormalizeTransportContext,
+  ProviderResolveConfigApiKeyContext,
+  ProviderNormalizeModelIdContext,
+  ProviderReplayPolicy,
+  ProviderReplayPolicyContext,
+  ProviderReplaySessionEntry,
+  ProviderReplaySessionState,
+  ProviderPreparedRuntimeAuth,
+  ProviderReasoningOutputMode,
+  ProviderReasoningOutputModeContext,
+  ProviderResolvedUsageAuth,
+  ProviderUsageAuthToken,
+  ProviderToolSchemaDiagnostic,
+  ProviderPrepareExtraParamsContext,
+  ProviderPrepareDynamicModelContext,
+  ProviderPrepareRuntimeAuthContext,
+  ProviderSanitizeReplayHistoryContext,
+  ProviderResolveUsageAuthContext,
+  ProviderThinkingProfile,
+  ProviderResolveDynamicModelContext,
+  ProviderResolveTransportTurnStateContext,
+  ProviderResolveWebSocketSessionPolicyContext,
+  ProviderNormalizeResolvedModelContext,
+  RealtimeTranscriptionProviderPlugin,
+  ProviderTransportTurnState,
+  SpeechProviderPlugin,
+  ProviderThinkingPolicyContext,
+  ProviderValidateReplayTurnsContext,
+  ProviderWebSocketSessionPolicy,
+  ProviderWrapStreamFnContext,
+  UnifiedModelCatalogProviderContext,
+  UnifiedModelCatalogProviderPlugin,
+  ACTAgentGatewayDiscoveryAdvertiseContext,
+  ACTAgentGatewayDiscoveryService,
+  ACTAgentPluginService,
+  ACTAgentPluginServiceContext,
+  ProviderAuthContext,
+  ProviderAuthDoctorHintContext,
+  ProviderAuthMethodNonInteractiveContext,
+  ProviderAuthMethod,
+  ProviderAuthResult,
+  ACTAgentPluginCommandDefinition,
+  ACTAgentPluginDefinition,
+  PluginLogger,
+};
+export type {
+  PluginConversationBinding,
+  PluginConversationBindingResolvedEvent,
+  PluginConversationBindingRequestParams,
+  PluginConversationBindingRequestResult,
+} from "../plugins/conversation-binding.types.js";
+export type {
+  PluginHookInboundClaimContext,
+  PluginHookInboundClaimEvent,
+  PluginHookInboundClaimResult,
+} from "../plugins/hook-types.js";
+export type { ProviderRuntimeModel } from "../plugins/provider-runtime-model.types.js";
+export type {
+  UnifiedModelCatalogEntry,
+  UnifiedModelCatalogKind,
+  UnifiedModelCatalogSource,
+} from "@actagent/model-catalog-core/model-catalog-types";
+export type { ACTAgentConfig };
+
+export {
+  buildJsonPluginConfigSchema,
+  buildPluginConfigSchema,
+  emptyPluginConfigSchema,
+} from "../plugins/config-schema.js";
+
+/** Options for a plugin entry that registers providers, tools, commands, or services. */
+type DefinePluginEntryOptions = {
+  id: string;
+  name: string;
+  description: string;
+  /**
+   * @deprecated Declare exclusive plugin kind in `actagent.plugin.json` via
+   * manifest `kind`. Runtime-entry `kind` remains only as a compatibility
+   * fallback for older plugins.
+   */
+  kind?: ACTAgentPluginDefinition["kind"];
+  configSchema?: ACTAgentPluginConfigSchema | (() => ACTAgentPluginConfigSchema);
+  reload?: ACTAgentPluginDefinition["reload"];
+  nodeHostCommands?: ACTAgentPluginDefinition["nodeHostCommands"];
+  securityAuditCollectors?: ACTAgentPluginDefinition["securityAuditCollectors"];
+  register: (api: ACTAgentPluginApi) => void;
+};
+
+/** Normalized object shape that ACTAgent loads from a plugin entry module. */
+type DefinedPluginEntry = {
+  id: string;
+  name: string;
+  description: string;
+  configSchema: ACTAgentPluginConfigSchema;
+  register: NonNullable<ACTAgentPluginDefinition["register"]>;
+} & Pick<
+  ACTAgentPluginDefinition,
+  "kind" | "reload" | "nodeHostCommands" | "securityAuditCollectors"
+>;
+
+/**
+ * Canonical entry helper for non-channel plugins.
+ *
+ * Use this for provider, tool, command, service, memory, and context-engine
+ * plugins. Channel plugins should use `defineChannelPluginEntry(...)` from
+ * `actagent/plugin-sdk/core` so they inherit the channel capability wiring.
+ */
+export function definePluginEntry({
+  id,
+  name,
+  description,
+  kind,
+  configSchema = emptyPluginConfigSchema,
+  reload,
+  nodeHostCommands,
+  securityAuditCollectors,
+  register,
+}: DefinePluginEntryOptions): DefinedPluginEntry {
+  const getConfigSchema = createCachedLazyValueGetter(configSchema);
+  return {
+    id,
+    name,
+    description,
+    ...(kind ? { kind } : {}),
+    ...(reload ? { reload } : {}),
+    ...(nodeHostCommands ? { nodeHostCommands } : {}),
+    ...(securityAuditCollectors ? { securityAuditCollectors } : {}),
+    get configSchema() {
+      return getConfigSchema();
+    },
+    register,
+  };
+}

@@ -1,0 +1,148 @@
+/**
+ * Gateway startup orchestration tests.
+ */
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ACTAgentConfig } from "../config/config.js";
+
+const ensureACTAgentModelsJsonMock = vi.fn<
+  (
+    config: unknown,
+    agentDir: unknown,
+    options?: unknown,
+  ) => Promise<{ agentDir: string; wrote: boolean }>
+>(async () => ({ agentDir: "/tmp/agent", wrote: false }));
+const resolveModelMock = vi.fn<(...args: unknown[]) => Record<string, never>>(() => ({}));
+
+vi.mock("../agents/agent-scope.js", () => ({
+  resolveDefaultAgentDir: () => "/tmp/agent",
+  resolveAgentWorkspaceDir: () => "/tmp/workspace",
+  resolveDefaultAgentId: () => "default",
+}));
+
+vi.mock("../agents/models-config.js", () => ({
+  ensureACTAgentModelsJson: (config: unknown, agentDir: unknown, options?: unknown) =>
+    ensureACTAgentModelsJsonMock(config, agentDir, options),
+}));
+
+vi.mock("../agents/embedded-agent-runner/model.js", () => ({
+  resolveModel: (...args: unknown[]) => resolveModelMock(...args),
+}));
+
+let prewarmConfiguredPrimaryModel: typeof import("./server-startup-post-attach.js").testing.prewarmConfiguredPrimaryModel;
+let shouldSkipStartupModelPrewarm: typeof import("./server-startup-post-attach.js").testing.shouldSkipStartupModelPrewarm;
+
+function expectModelsJsonPrewarmCall(cfg: ACTAgentConfig) {
+  expect(ensureACTAgentModelsJsonMock).toHaveBeenCalledTimes(1);
+  const [calledConfig, agentDir, options] = ensureACTAgentModelsJsonMock.mock.calls.at(0) ?? [];
+  expect(calledConfig).toBe(cfg);
+  expect(agentDir).toBe("/tmp/agent");
+  expect(options).toEqual({
+    workspaceDir: "/tmp/workspace",
+    providerDiscoveryProviderIds: ["openai"],
+    providerDiscoveryTimeoutMs: 5000,
+    providerDiscoveryEntriesOnly: true,
+  });
+}
+
+describe("gateway startup primary model warmup", () => {
+  beforeAll(async () => {
+    ({
+      testing: { prewarmConfiguredPrimaryModel, shouldSkipStartupModelPrewarm },
+    } = await import("./server-startup-post-attach.js"));
+  });
+
+  beforeEach(() => {
+    ensureACTAgentModelsJsonMock.mockClear();
+    resolveModelMock.mockClear();
+  });
+
+  it("prewarms an explicit configured primary model", async () => {
+    const cfg = {
+      agents: {
+        defaults: {
+          model: {
+            primary: "openai/gpt-5.4",
+          },
+        },
+      },
+    } as ACTAgentConfig;
+
+    await prewarmConfiguredPrimaryModel({
+      cfg,
+      log: { warn: vi.fn() },
+    });
+
+    expectModelsJsonPrewarmCall(cfg);
+    expect(resolveModelMock).not.toHaveBeenCalled();
+  });
+
+  it("skips warmup when no explicit primary model is configured", async () => {
+    await prewarmConfiguredPrimaryModel({
+      cfg: {} as ACTAgentConfig,
+      log: { warn: vi.fn() },
+    });
+
+    expect(ensureACTAgentModelsJsonMock).not.toHaveBeenCalled();
+    expect(resolveModelMock).not.toHaveBeenCalled();
+  });
+
+  it("honors the startup model prewarm skip env", () => {
+    expect(shouldSkipStartupModelPrewarm({})).toBe(false);
+    expect(
+      shouldSkipStartupModelPrewarm({
+        ACTAGENT_SKIP_STARTUP_MODEL_PREWARM: "1",
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipStartupModelPrewarm({
+        ACTAGENT_SKIP_STARTUP_MODEL_PREWARM: "true",
+      }),
+    ).toBe(true);
+  });
+
+  it("skips static warmup for configured CLI backends", async () => {
+    await prewarmConfiguredPrimaryModel({
+      cfg: {
+        agents: {
+          defaults: {
+            model: {
+              primary: "codex-cli/gpt-5.5",
+            },
+            cliBackends: {
+              "codex-cli": {
+                command: "codex",
+                args: ["exec"],
+              },
+            },
+          },
+        },
+      } as ACTAgentConfig,
+      log: { warn: vi.fn() },
+    });
+
+    expect(ensureACTAgentModelsJsonMock).not.toHaveBeenCalled();
+    expect(resolveModelMock).not.toHaveBeenCalled();
+  });
+
+  it("warns when scoped models.json preparation fails", async () => {
+    ensureACTAgentModelsJsonMock.mockRejectedValueOnce(new Error("models write failed"));
+    const warn = vi.fn();
+
+    await prewarmConfiguredPrimaryModel({
+      cfg: {
+        agents: {
+          defaults: {
+            model: {
+              primary: "codex/gpt-5.4",
+            },
+          },
+        },
+      } as ACTAgentConfig,
+      log: { warn },
+    });
+
+    expect(warn).toHaveBeenCalledWith(
+      "startup model warmup failed for codex/gpt-5.4: Error: models write failed",
+    );
+  });
+});

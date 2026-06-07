@@ -1,0 +1,66 @@
+# Protect the ownership rules themselves.
+/.github/CODEOWNERS @admin1douyin
+
+# WARNING: GitHub CODEOWNERS uses last-match-wins semantics.
+# If you add overlapping rules below the secops block, include @actagent/actagent-secops
+# on those entries too or you can silently remove required secops review.
+# Security-sensitive code, config, and docs require secops review.
+/SECURITY.md @actagent/actagent-secops
+/.github/dependabot.yml @actagent/actagent-secops
+/.github/codeql/ @actagent/actagent-secops
+/.github/workflows/codeql.yml @actagent/actagent-secops
+/.github/workflows/codeql-android-critical-security.yml @actagent/actagent-secops
+/.github/workflows/codeql-critical-quality.yml @actagent/actagent-secops
+/.github/workflows/dependency-guard.yml @actagent/actagent-secops
+/test/scripts/dependency-guard-workflow.test.ts @actagent/actagent-secops
+/test/scripts/dependency-guard-script.test.ts @actagent/actagent-secops
+/scripts/github/dependency-guard.mjs @actagent/actagent-secops
+/package-lock.json @actagent/actagent-secops
+/npm-shrinkwrap.json @actagent/actagent-secops
+/extensions/*/package-lock.json @actagent/actagent-secops
+/extensions/*/npm-shrinkwrap.json @actagent/actagent-secops
+/pnpm-lock.yaml @actagent/actagent-secops
+/scripts/generate-npm-shrinkwrap.mjs @actagent/actagent-secops
+/src/security/ @actagent/actagent-secops
+/src/secrets/ @actagent/actagent-secops
+/src/config/*secret*.ts @actagent/actagent-secops
+/src/config/**/*secret*.ts @actagent/actagent-secops
+/src/gateway/*auth*.ts @actagent/actagent-secops
+/src/gateway/**/*auth*.ts @actagent/actagent-secops
+/src/gateway/*secret*.ts @actagent/actagent-secops
+/src/gateway/**/*secret*.ts @actagent/actagent-secops
+/src/gateway/security-path*.ts @actagent/actagent-secops
+/src/gateway/resolve-configured-secret-input-string*.ts @actagent/actagent-secops
+/packages/gateway-protocol/src/**/*secret*.ts @actagent/actagent-secops
+/src/gateway/server-methods/secrets*.ts @actagent/actagent-secops
+/src/agents/*auth*.ts @actagent/actagent-secops
+/src/agents/**/*auth*.ts @actagent/actagent-secops
+/src/agents/auth-profiles*.ts @actagent/actagent-secops
+/src/agents/auth-health*.ts @actagent/actagent-secops
+/src/agents/auth-profiles/ @actagent/actagent-secops
+/src/agents/sandbox.ts @actagent/actagent-secops
+/src/agents/sandbox-*.ts @actagent/actagent-secops
+/src/agents/sandbox/ @actagent/actagent-secops
+/src/infra/secret-file*.ts @actagent/actagent-secops
+/src/cron/stagger.ts @actagent/actagent-secops
+/src/cron/service/jobs.ts @actagent/actagent-secops
+/docs/security/ @actagent/actagent-secops
+/docs/gateway/authentication.md @actagent/actagent-secops
+/docs/gateway/sandbox-vs-tool-policy-vs-elevated.md @actagent/actagent-secops
+/docs/gateway/sandboxing.md @actagent/actagent-secops
+/docs/gateway/secrets-plan-contract.md @actagent/actagent-secops
+/docs/gateway/secrets.md @actagent/actagent-secops
+/docs/gateway/security/ @actagent/actagent-secops
+/docs/cli/approvals.md @actagent/actagent-secops
+/docs/cli/sandbox.md @actagent/actagent-secops
+/docs/cli/security.md @actagent/actagent-secops
+/docs/cli/secrets.md @actagent/actagent-secops
+/docs/reference/secretref-credential-surface.md @actagent/actagent-secops
+/docs/reference/secretref-user-supplied-credentials-matrix.json @actagent/actagent-secops
+
+# Release workflow and its supporting release-path checks.
+/.github/workflows/actagent-npm-release.yml @actagent/actagent-release-managers
+/docs/reference/RELEASING.md @actagent/actagent-release-managers
+/scripts/actagent-npm-publish.sh @actagent/actagent-release-managers
+/scripts/actagent-npm-release-check.ts @actagent/actagent-release-managers
+/scripts/release-check.ts @actagent/actagent-release-managers

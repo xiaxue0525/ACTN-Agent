@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Verifies `actagent update` succeeds when a managed external plugin is corrupt.
+# The lane installs an older published ACTAgent package, corrupts an npm-managed
+# plugin payload, then updates to the prepared package artifact.
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/docker-e2e-image.sh"
+source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
+
+IMAGE_NAME="$(docker_e2e_resolve_image "actagent-update-corrupt-plugin-e2e" ACTAGENT_UPDATE_CORRUPT_PLUGIN_E2E_IMAGE)"
+SKIP_BUILD="${ACTAGENT_UPDATE_CORRUPT_PLUGIN_E2E_SKIP_BUILD:-0}"
+cleanup() {
+  docker_e2e_cleanup_package_tgz "${PACKAGE_TGZ:-}"
+}
+trap cleanup EXIT
+
+PACKAGE_TGZ="$(docker_e2e_prepare_package_tgz update-corrupt-plugin "${ACTAGENT_CURRENT_PACKAGE_TGZ:-}")"
+# Bare lanes mount the package artifact instead of baking app sources into the image.
+docker_e2e_package_mount_args "$PACKAGE_TGZ"
+
+docker_e2e_build_or_reuse "$IMAGE_NAME" update-corrupt-plugin "$ROOT_DIR/scripts/e2e/Dockerfile" "$ROOT_DIR" "bare" "$SKIP_BUILD"
+ACTAGENT_TEST_STATE_SCRIPT_B64="$(docker_e2e_test_state_shell_b64 update-corrupt-plugin empty)"
+
+echo "Running corrupt plugin update tolerance E2E..."
+docker_e2e_run_with_harness \
+  -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+  -e ACTAGENT_SKIP_CHANNELS=1 \
+  -e ACTAGENT_SKIP_PROVIDERS=1 \
+  -e "ACTAGENT_TEST_STATE_SCRIPT_B64=$ACTAGENT_TEST_STATE_SCRIPT_B64" \
+  "${DOCKER_E2E_PACKAGE_ARGS[@]}" \
+  "$IMAGE_NAME" \
+  bash scripts/e2e/lib/plugin-update/corrupt-update-scenario.sh
+
+echo "Corrupt plugin update tolerance Docker E2E passed."

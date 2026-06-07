@@ -1,0 +1,27 @@
+{
+  "name": "@actagent/policy",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent policy doctor checks for workspace conformance",
+  "type": "module",
+  "dependencies": {
+    "json5": "2.2.3"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

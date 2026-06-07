@@ -1,0 +1,4 @@
+interface:
+  display_name: "ACTAgent Debugging"
+  short_description: "Debug model, tool, stream, and live behavior"
+  default_prompt: "Use $actagent-debugging to identify the right ACTAgent debug boundary, turn on targeted logs, and choose the narrowest local or Crabbox proof."

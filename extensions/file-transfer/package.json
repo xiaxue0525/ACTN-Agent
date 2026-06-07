@@ -1,0 +1,18 @@
+{
+  "name": "@actagent/file-transfer",
+  "version": "2026.6.3",
+  "description": "ACTAgent file transfer plugin (file_fetch, dir_list, dir_fetch, file_write)",
+  "type": "module",
+  "dependencies": {
+    "minimatch": "10.2.5",
+    "typebox": "1.1.39"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

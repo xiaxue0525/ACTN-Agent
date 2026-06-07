@@ -1,0 +1,19 @@
+{
+  "name": "@actagent/google-plugin",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Google plugin",
+  "type": "module",
+  "dependencies": {
+    "@google/genai": "2.7.0",
+    "google-auth-library": "10.6.2"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

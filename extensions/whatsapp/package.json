@@ -1,0 +1,73 @@
+{
+  "name": "@actagent/whatsapp",
+  "version": "2026.6.3",
+  "description": "ACTAgent WhatsApp channel plugin for WhatsApp Web chats.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "dependencies": {
+    "audio-decode": "2.2.3",
+    "baileys": "7.0.0-rc13",
+    "typebox": "1.1.39"
+  },
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "setupFeatures": {
+      "legacyStateMigrations": true,
+      "legacySessionSurfaces": true
+    },
+    "channel": {
+      "id": "whatsapp",
+      "label": "WhatsApp",
+      "selectionLabel": "WhatsApp (QR link)",
+      "detailLabel": "WhatsApp Web",
+      "docsPath": "/channels/whatsapp",
+      "docsLabel": "whatsapp",
+      "blurb": "works with your own number; recommend a separate phone + eSIM.",
+      "systemImage": "message",
+      "persistedAuthState": {
+        "specifier": "./auth-presence",
+        "exportName": "hasAnyWhatsAppAuth"
+      },
+      "cliAddOptions": [
+        {
+          "flags": "--auth-dir <path>",
+          "description": "WhatsApp auth directory override"
+        }
+      ]
+    },
+    "install": {
+      "actagenthubSpec": "actagenthub:@actagent/whatsapp",
+      "npmSpec": "@actagent/whatsapp",
+      "defaultChoice": "actagenthub",
+      "minHostVersion": ">=2026.4.25"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2"
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true
+    }
+  }
+}

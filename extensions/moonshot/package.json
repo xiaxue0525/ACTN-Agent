@@ -1,0 +1,15 @@
+{
+  "name": "@actagent/moonshot-provider",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Moonshot provider plugin",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ACTAgent Testing"
+  short_description: "Choose cheap, targeted ACTAgent validation"
+  default_prompt: "Use $actagent-testing to choose the cheapest safe test or CI verification path, inspect failures, and rerun only the relevant ACTAgent lane."

@@ -1,0 +1,34 @@
+{
+  "name": "@actagent/brave-plugin",
+  "version": "2026.6.3",
+  "description": "ACTAgent Brave Search provider plugin for web search.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actagent/actagent"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "install": {
+      "npmSpec": "@actagent/brave-plugin",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.10",
+      "allowInvalidConfigRecovery": true
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    },
+    "build": {
+      "actagentVersion": "2026.6.2"
+    },
+    "release": {
+      "publishToACTAgentHub": true,
+      "publishToNpm": true
+    }
+  }
+}

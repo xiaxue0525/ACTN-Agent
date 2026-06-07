@@ -1,0 +1,337 @@
+// ACPX tests cover process reaper plugin behavior.
+import path from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import { ACTAGENT_ACPX_LEASE_ID_ARG, ACTAGENT_GATEWAY_INSTANCE_ID_ARG } from "./process-lease.js";
+import {
+  cleanupACTAgentOwnedAcpxProcessTree,
+  isACTAgentLeaseAwareAcpxProcessCommand,
+  isACTAgentOwnedAcpxProcessCommand,
+  reapStaleACTAgentOwnedAcpxOrphans,
+  type AcpxProcessInfo,
+} from "./process-reaper.js";
+
+const WRAPPER_ROOT = "/tmp/actagent-state/acpx";
+const CODEX_WRAPPER_COMMAND = `node ${WRAPPER_ROOT}/codex-acp-wrapper.mjs`;
+const CODEX_WRAPPER_COMMAND_WITH_LEASE = `${CODEX_WRAPPER_COMMAND} ${ACTAGENT_ACPX_LEASE_ID_ARG} lease-1 ${ACTAGENT_GATEWAY_INSTANCE_ID_ARG} gateway-1`;
+const CLAUDE_WRAPPER_COMMAND = `node ${WRAPPER_ROOT}/claude-agent-acp-wrapper.mjs`;
+const PLUGIN_DEPS_CODEX_COMMAND =
+  "node /tmp/actagent/plugin-runtime-deps/node_modules/@zed-industries/codex-acp/bin/codex-acp.js";
+const LOCAL_NODE_MODULES_CODEX_COMMAND = `node ${path.resolve(
+  "node_modules/@zed-industries/codex-acp/bin/codex-acp.js",
+)}`;
+const LOCAL_NODE_MODULES_CODEX_PLATFORM_COMMAND = path.resolve(
+  "node_modules/@zed-industries/codex-acp-linux-x64/bin/codex-acp",
+);
+
+function cleanupDeps(processes: AcpxProcessInfo[]) {
+  const killed: Array<{ pid: number; signal: NodeJS.Signals }> = [];
+  return {
+    killed,
+    deps: {
+      listProcesses: vi.fn(async () => processes),
+      killProcess: vi.fn((pid: number, signal: NodeJS.Signals) => {
+        killed.push({ pid, signal });
+      }),
+      sleep: vi.fn(async () => {}),
+    },
+  };
+}
+
+function collectMatching<T, U>(
+  items: readonly T[],
+  predicate: (item: T) => boolean,
+  map: (item: T) => U,
+): U[] {
+  const matches: U[] = [];
+  for (const item of items) {
+    if (predicate(item)) {
+      matches.push(map(item));
+    }
+  }
+  return matches;
+}
+
+describe("process reaper", () => {
+  it("recognizes generated Codex and Claude wrappers only under the configured root", () => {
+    expect(
+      isACTAgentOwnedAcpxProcessCommand({
+        command: CODEX_WRAPPER_COMMAND,
+        wrapperRoot: WRAPPER_ROOT,
+      }),
+    ).toBe(true);
+    expect(
+      isACTAgentOwnedAcpxProcessCommand({
+        command: CLAUDE_WRAPPER_COMMAND,
+        wrapperRoot: WRAPPER_ROOT,
+      }),
+    ).toBe(true);
+    expect(
+      isACTAgentOwnedAcpxProcessCommand({
+        command: "node /tmp/other/codex-acp-wrapper.mjs",
+        wrapperRoot: WRAPPER_ROOT,
+      }),
+    ).toBe(false);
+  });
+
+  it("only treats generated wrappers as launch-lease aware", () => {
+    expect(
+      isACTAgentLeaseAwareAcpxProcessCommand({
+        command: CODEX_WRAPPER_COMMAND,
+        wrapperRoot: WRAPPER_ROOT,
+      }),
+    ).toBe(true);
+    expect(
+      isACTAgentLeaseAwareAcpxProcessCommand({ command: LOCAL_NODE_MODULES_CODEX_COMMAND }),
+    ).toBe(false);
+    expect(isACTAgentLeaseAwareAcpxProcessCommand({ command: PLUGIN_DEPS_CODEX_COMMAND })).toBe(
+      false,
+    );
+  });
+
+  it("recognizes ACTAgent plugin-runtime-deps ACP adapter children", () => {
+    expect(isACTAgentOwnedAcpxProcessCommand({ command: PLUGIN_DEPS_CODEX_COMMAND })).toBe(true);
+    expect(isACTAgentOwnedAcpxProcessCommand({ command: "npx @zed-industries/codex-acp" })).toBe(
+      false,
+    );
+  });
+
+  it("recognizes plugin-local ACP adapter package paths without trusting arbitrary installs", () => {
+    expect(isACTAgentOwnedAcpxProcessCommand({ command: LOCAL_NODE_MODULES_CODEX_COMMAND })).toBe(
+      true,
+    );
+    expect(
+      isACTAgentOwnedAcpxProcessCommand({
+        command: "node /tmp/other-project/node_modules/@zed-industries/codex-acp/bin/codex-acp.js",
+      }),
+    ).toBe(false);
+  });
+
+  it("kills an owned recorded process tree children first", async () => {
+    const { deps, killed } = cleanupDeps([
+      { pid: 100, ppid: 1, command: CODEX_WRAPPER_COMMAND },
+      { pid: 101, ppid: 100, command: PLUGIN_DEPS_CODEX_COMMAND },
+      { pid: 102, ppid: 101, command: "node child.js" },
+    ]);
+
+    const result = await cleanupACTAgentOwnedAcpxProcessTree({
+      rootPid: 100,
+      rootCommand: CODEX_WRAPPER_COMMAND,
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result.skippedReason).toBeUndefined();
+    expect(result.inspectedPids).toEqual([100, 101, 102]);
+    expect(killed.slice(0, 3)).toEqual([
+      { pid: 102, signal: "SIGTERM" },
+      { pid: 101, signal: "SIGTERM" },
+      { pid: 100, signal: "SIGTERM" },
+    ]);
+  });
+
+  it("allows wrapper-root verification when stored wrapper commands are shell-quoted", async () => {
+    const { deps, killed } = cleanupDeps([{ pid: 110, ppid: 1, command: CODEX_WRAPPER_COMMAND }]);
+
+    const result = await cleanupACTAgentOwnedAcpxProcessTree({
+      rootPid: 110,
+      rootCommand: `"/usr/local/bin/node" "${WRAPPER_ROOT}/codex-acp-wrapper.mjs"`,
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result.skippedReason).toBeUndefined();
+    expect(killed[0]).toEqual({ pid: 110, signal: "SIGTERM" });
+  });
+
+  it("requires matching lease identity before killing a leased process tree", async () => {
+    const { deps, killed } = cleanupDeps([
+      { pid: 112, ppid: 1, command: CODEX_WRAPPER_COMMAND_WITH_LEASE },
+    ]);
+
+    const result = await cleanupACTAgentOwnedAcpxProcessTree({
+      rootPid: 112,
+      rootCommand: CODEX_WRAPPER_COMMAND,
+      expectedLeaseId: "lease-1",
+      expectedGatewayInstanceId: "gateway-1",
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result.skippedReason).toBeUndefined();
+    expect(killed[0]).toEqual({ pid: 112, signal: "SIGTERM" });
+  });
+
+  it("does not kill a reused same-root wrapper pid with a different lease identity", async () => {
+    const { deps, killed } = cleanupDeps([
+      {
+        pid: 113,
+        ppid: 1,
+        command: `${CODEX_WRAPPER_COMMAND} ${ACTAGENT_ACPX_LEASE_ID_ARG} other-lease ${ACTAGENT_GATEWAY_INSTANCE_ID_ARG} gateway-1`,
+      },
+    ]);
+
+    const result = await cleanupACTAgentOwnedAcpxProcessTree({
+      rootPid: 113,
+      rootCommand: CODEX_WRAPPER_COMMAND,
+      expectedLeaseId: "lease-1",
+      expectedGatewayInstanceId: "gateway-1",
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result).toEqual({
+      inspectedPids: [113],
+      terminatedPids: [],
+      skippedReason: "not-actagent-owned",
+    });
+    expect(killed).toStrictEqual([]);
+  });
+
+  it("skips recorded pid cleanup when process listing is unavailable", async () => {
+    const killed: Array<{ pid: number; signal: NodeJS.Signals }> = [];
+    const result = await cleanupACTAgentOwnedAcpxProcessTree({
+      rootPid: 200,
+      rootCommand: CODEX_WRAPPER_COMMAND,
+      wrapperRoot: WRAPPER_ROOT,
+      deps: {
+        listProcesses: vi.fn(async () => {
+          throw new Error("ps unavailable");
+        }),
+        killProcess: vi.fn((pid, signal) => {
+          killed.push({ pid, signal });
+        }),
+        sleep: vi.fn(async () => {}),
+      },
+    });
+
+    expect(result).toEqual({
+      inspectedPids: [],
+      terminatedPids: [],
+      skippedReason: "unverified-root",
+    });
+    expect(killed).toStrictEqual([]);
+  });
+
+  it("does not kill a reused pid when the live command is not ACTAgent-owned", async () => {
+    const { deps, killed } = cleanupDeps([{ pid: 250, ppid: 1, command: "node unrelated.js" }]);
+
+    const result = await cleanupACTAgentOwnedAcpxProcessTree({
+      rootPid: 250,
+      rootCommand: CODEX_WRAPPER_COMMAND,
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result).toEqual({
+      inspectedPids: [250],
+      terminatedPids: [],
+      skippedReason: "not-actagent-owned",
+    });
+    expect(killed).toStrictEqual([]);
+  });
+
+  it("does not kill a reused adapter pid when the stored root was a generated wrapper", async () => {
+    const { deps, killed } = cleanupDeps([
+      {
+        pid: 260,
+        ppid: 1,
+        command: PLUGIN_DEPS_CODEX_COMMAND,
+      },
+    ]);
+
+    const result = await cleanupACTAgentOwnedAcpxProcessTree({
+      rootPid: 260,
+      rootCommand: CODEX_WRAPPER_COMMAND,
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result).toEqual({
+      inspectedPids: [260],
+      terminatedPids: [],
+      skippedReason: "not-actagent-owned",
+    });
+    expect(killed).toStrictEqual([]);
+  });
+
+  it("skips non-owned recorded process trees", async () => {
+    const { deps, killed } = cleanupDeps([{ pid: 300, ppid: 1, command: "node server.js" }]);
+
+    const result = await cleanupACTAgentOwnedAcpxProcessTree({
+      rootPid: 300,
+      rootCommand: "node server.js",
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result.skippedReason).toBe("not-actagent-owned");
+    expect(killed).toStrictEqual([]);
+  });
+
+  it("reaps stale ACTAgent-owned wrapper and adapter orphans on startup", async () => {
+    const { deps, killed } = cleanupDeps([
+      { pid: 400, ppid: 1, command: CODEX_WRAPPER_COMMAND },
+      { pid: 401, ppid: 400, command: PLUGIN_DEPS_CODEX_COMMAND },
+      { pid: 402, ppid: 401, command: "node child.js" },
+      { pid: 403, ppid: 1, command: CLAUDE_WRAPPER_COMMAND },
+      { pid: 404, ppid: 403, command: "node claude-child.js" },
+      { pid: 405, ppid: 1, command: PLUGIN_DEPS_CODEX_COMMAND },
+      { pid: 406, ppid: 1, command: "node /tmp/other/codex-acp-wrapper.mjs" },
+    ]);
+
+    const result = await reapStaleACTAgentOwnedAcpxOrphans({
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result.skippedReason).toBeUndefined();
+    expect(result.inspectedPids).toEqual([400, 401, 402, 403, 404, 405]);
+    expect(
+      collectMatching(
+        killed,
+        (entry) => entry.signal === "SIGTERM",
+        (entry) => entry.pid,
+      ),
+    ).toEqual([402, 401, 400, 404, 403, 405]);
+  });
+
+  it("reaps plugin-local Codex ACP adapter orphans when the generated wrapper is already gone", async () => {
+    const { deps, killed } = cleanupDeps([
+      { pid: 500, ppid: 1, command: LOCAL_NODE_MODULES_CODEX_COMMAND },
+      { pid: 501, ppid: 500, command: LOCAL_NODE_MODULES_CODEX_PLATFORM_COMMAND },
+    ]);
+
+    const result = await reapStaleACTAgentOwnedAcpxOrphans({
+      wrapperRoot: WRAPPER_ROOT,
+      deps,
+    });
+
+    expect(result.skippedReason).toBeUndefined();
+    expect(result.inspectedPids).toEqual([500, 501]);
+    expect(
+      collectMatching(
+        killed,
+        (entry) => entry.signal === "SIGTERM",
+        (entry) => entry.pid,
+      ),
+    ).toEqual([501, 500]);
+  });
+
+  it("keeps startup scans quiet when process listing is unavailable", async () => {
+    const result = await reapStaleACTAgentOwnedAcpxOrphans({
+      wrapperRoot: WRAPPER_ROOT,
+      deps: {
+        listProcesses: vi.fn(async () => {
+          throw new Error("ps unavailable");
+        }),
+        sleep: vi.fn(async () => {}),
+      },
+    });
+
+    expect(result).toEqual({
+      inspectedPids: [],
+      terminatedPids: [],
+      skippedReason: "process-list-unavailable",
+    });
+  });
+});

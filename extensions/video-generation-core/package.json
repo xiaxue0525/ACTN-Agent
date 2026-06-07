@@ -1,0 +1,10 @@
+{
+  "name": "@actagent/video-generation-core",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent video generation runtime package",
+  "type": "module",
+  "devDependencies": {
+    "@actagent/plugin-sdk": "workspace:*"
+  }
+}

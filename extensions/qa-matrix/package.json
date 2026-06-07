@@ -1,0 +1,31 @@
+{
+  "name": "@actagent/qa-matrix",
+  "version": "2026.6.3",
+  "private": true,
+  "description": "ACTAgent Matrix QA runner plugin",
+  "type": "module",
+  "dependencies": {
+    "undici": "8.3.0"
+  },
+  "devDependencies": {
+    "@actagent/matrix": "workspace:*",
+    "@actagent/plugin-sdk": "workspace:*",
+    "actagent": "workspace:*"
+  },
+  "peerDependencies": {
+    "actagent": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "actagent": {
+      "optional": true
+    }
+  },
+  "actagent": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.6.2"
+    }
+  }
+}

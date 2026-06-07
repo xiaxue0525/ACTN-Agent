@@ -1,0 +1,22 @@
+// Default signing values for shared/repo builds.
+// Auto-selected local team overrides live in .local-signing.xcconfig (git-ignored).
+// Manual local overrides can go in LocalSigning.xcconfig (git-ignored).
+
+#include "Config/Version.xcconfig"
+
+ACTAGENT_CODE_SIGN_STYLE = Manual
+ACTAGENT_DEVELOPMENT_TEAM = Y5PE65HELJ
+
+ACTAGENT_APP_BUNDLE_ID = ai.actagent.client
+ACTAGENT_SHARE_BUNDLE_ID = ai.actagent.client.share
+ACTAGENT_WATCH_APP_BUNDLE_ID = ai.actagent.client.watchkitapp
+ACTAGENT_WATCH_EXTENSION_BUNDLE_ID = ai.actagent.client.watchkitapp.extension
+ACTAGENT_ACTIVITY_WIDGET_BUNDLE_ID = ai.actagent.client.activitywidget
+
+ACTAGENT_APP_PROFILE = ai.actagent.client Development
+ACTAGENT_SHARE_PROFILE = ai.actagent.client.share Development
+
+// Keep local includes after defaults: xcconfig is evaluated top-to-bottom,
+// so later assignments in local files override the defaults above.
+#include? ".local-signing.xcconfig"
+#include? "LocalSigning.xcconfig"

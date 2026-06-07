@@ -1,0 +1,21 @@
+// Googlechat plugin entrypoint registers its ACTAgent integration.
+import { defineBundledChannelEntry } from "actagent/plugin-sdk/channel-entry-contract";
+
+export default defineBundledChannelEntry({
+  id: "googlechat",
+  name: "Google Chat",
+  description: "ACTAgent Google Chat channel plugin",
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./channel-plugin-api.js",
+    exportName: "googlechatPlugin",
+  },
+  secrets: {
+    specifier: "./secret-contract-api.js",
+    exportName: "channelSecrets",
+  },
+  runtime: {
+    specifier: "./runtime-api.js",
+    exportName: "setGoogleChatRuntime",
+  },
+});

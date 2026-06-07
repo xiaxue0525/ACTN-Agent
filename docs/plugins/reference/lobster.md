@@ -1,0 +1,19 @@
+---
+summary: "Lobster workflow tool plugin for typed pipelines and resumable approvals."
+read_when:
+  - You are installing, configuring, or auditing the lobster plugin
+title: "Lobster plugin"
+---
+
+# Lobster plugin
+
+Lobster workflow tool plugin for typed pipelines and resumable approvals.
+
+## Distribution
+
+- Package: `@actagent/lobster`
+- Install route: npm; ACTAgentHub
+
+## Surface
+
+contracts: tools
