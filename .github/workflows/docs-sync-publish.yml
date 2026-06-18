@@ -25,13 +25,13 @@ jobs:
 
       - name: Checkout source repo
         if: env.ACTAGENT_DOCS_SYNC_TOKEN != ''
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
         with:
           fetch-depth: 0
 
       - name: Checkout ACTAgentHub docs source
         if: env.ACTAGENT_DOCS_SYNC_TOKEN != ''
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
         with:
           repository: actagent/actagenthub
           path: actagenthub-source
